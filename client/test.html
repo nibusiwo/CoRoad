@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoRoad - 同道自驾社交平台</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #07C160 0%, #05A84E 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      margin: 20px;
+    }
+    h1 {
+      font-size: 48px;
+      margin-bottom: 10px;
+      color: #07C160;
+    }
+    .subtitle {
+      font-size: 24px;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .status {
+      background: #f5f5f5;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+      text-align: left;
+    }
+    .status-item {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .online { background: #07C160; }
+    .offline { background: #E74C3C; }
+    .status-text { color: #333; }
+    .api-test {
+      background: #07C160;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 10px;
+      transition: all 0.3s;
+    }
+    .api-test:hover {
+      background: #05A84E;
+      transform: translateY(-2px);
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      text-align: left;
+      font-family: monospace;
+      font-size: 14px;
+      color: #333;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚗 同道 CoRoad</h1>
+    <div class="subtitle">自驾社交平台 - 正在启动中...</div>
+    
+    <div class="status">
+      <div class="status-item">
+        <div class="status-dot online"></div>
+        <span class="status-text">前端服务：运行中（端口 8080）</span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot online" id="backendStatus"></div>
+        <span class="status-text" id="backendText">后端服务：检查中...</span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot online" id="dbStatus"></div>
+        <span class="status-text" id="dbText">数据库：检查中...</span>
+      </div>
+    </div>
+
+    <button class="api-test" onclick="testBackend()">测试后端连接</button>
+    <button class="api-test" onclick="testHealth()" style="background: #4A90D9;">测试健康检查</button>
+    
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    // 检查后端状态
+    async function checkBackend() {
+      try {
+        const response = await fetch('http://localhost:3000/health');
+        const data = await response.json();
+        
+        document.getElementById('backendStatus').className = 'status-dot online';
+        document.getElementById('backendText').textContent = '后端服务：运行中（端口 3000）';
+        document.getElementById('dbStatus').className = 'status-dot online';
+        document.getElementById('dbText').textContent = '数据库：已连接';
+        
+        return true;
+      } catch (error) {
+        document.getElementById('backendStatus').className = 'status-dot offline';
+        document.getElementById('backendText').textContent = '后端服务：未运行';
+        document.getElementById('dbStatus').className = 'status-dot offline';
+        document.getElementById('dbText').textContent = '数据库：未连接';
+        
+        return false;
+      }
+    }
+
+    async function testBackend() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = '正在测试后端 API...';
+      
+      try {
+        const response = await fetch('http://localhost:3000/api/users/profile');
+        const data = await response.json();
+        resultDiv.textContent = '✅ 后端 API 响应成功:\n' + JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultDiv.textContent = '❌ 后端 API 测试失败:\n' + error.message;
+      }
+    }
+
+    async function testHealth() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = '正在测试健康检查...';
+      
+      try {
+        const response = await fetch('http://localhost:3000/health');
+        const data = await response.json();
+        resultDiv.textContent = '✅ 健康检查成功:\n' + JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultDiv.textContent = '❌ 健康检查失败:\n' + error.message;
+      }
+    }
+
+    // 页面加载时检查后端
+    checkBackend();
+  </script>
+</body>
+</html>

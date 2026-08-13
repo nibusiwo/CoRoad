@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
+  <!-- Background circle -->
+  <circle cx="40" cy="40" r="40" fill="#E0E0E0"/>
+  <!-- Person silhouette -->
+  <circle cx="40" cy="30" r="12" fill="#BDBDBD"/>
+  <path d="M18 70c0-16 9.8-30 22-30s22 14 22 30" fill="#BDBDBD"/>
+  <!-- Camera icon (subtle) -->
+  <rect x="25" y="55" width="30" height="20" rx="3" fill="#C8C8C8"/>
+  <circle cx="40" cy="65" r="6" fill="#BDBDBD"/>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="none">
+  <!-- Road -->
+  <rect x="20" y="105" width="160" height="4" rx="2" fill="#D0D0D0"/>
+  <!-- Road dashes -->
+  <line x1="40" y1="107" x2="55" y2="107" stroke="#E8E8E8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="70" y1="107" x2="85" y2="107" stroke="#E8E8E8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="100" y1="107" x2="115" y2="107" stroke="#E8E8E8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="130" y1="107" x2="145" y2="107" stroke="#E8E8E8" stroke-width="2" stroke-linecap="round"/>
+  <line x1="160" y1="107" x2="170" y2="107" stroke="#E8E8E8" stroke-width="2" stroke-linecap="round"/>
+  <!-- Car body -->
+  <rect x="85" y="80" width="42" height="16" rx="4" fill="#BDBDBD"/>
+  <!-- Car roof -->
+  <path d="M95 80 L100 68 L112 68 L117 80" fill="#C8C8C8"/>
+  <!-- Car windows -->
+  <path d="M101 80 L103.5 70 L108 70 L108 80" fill="#E0E0E0"/>
+  <path d="M109 80 L110 70 L112 70 L112 80" fill="#E0E0E0"/>
+  <!-- Wheels -->
+  <circle cx="94" cy="97" r="5" fill="#9E9E9E"/>
+  <circle cx="118" cy="97" r="5" fill="#9E9E9E"/>
+  <circle cx="94" cy="97" r="2.5" fill="#D0D0D0"/>
+  <circle cx="118" cy="97" r="2.5" fill="#D0D0D0"/>
+  <!-- Headlight -->
+  <rect x="125" y="83" width="3" height="4" rx="1" fill="#E8E8E8"/>
+  <!-- Tail light -->
+  <rect x="83" y="83" width="3" height="4" rx="1" fill="#B0B0B0"/>
+  <!-- Mountatins in background -->
+  <path d="M40 105 L58 75 L76 105" fill="#EEEEEE" stroke="#E0E0E0" stroke-width="1"/>
+  <path d="M120 105 L140 70 L160 105" fill="#EEEEEE" stroke="#E0E0E0" stroke-width="1"/>
+  <path d="M155 105 L170 78 L185 105" fill="#F2F2F2" stroke="#E0E0E0" stroke-width="1"/>
+  <!-- Tiny tree -->
+  <rect x="68" y="90" width="2" height="12" rx="1" fill="#D0D0D0"/>
+  <circle cx="69" cy="86" r="7" fill="#E8E8E8"/>
+  <!-- Clouds -->
+  <path d="M25 35 Q30 25 38 30 Q45 25 52 32 Q55 35 50 38 L28 38 Q22 38 25 35Z" fill="#F2F2F2"/>
+  <path d="M145 25 Q152 15 160 20 Q168 15 175 22 Q178 25 173 28 L148 28 Q142 28 145 25Z" fill="#F2F2F2"/>
+  <!-- Text: 暂无行程 -->
+  <text x="100" y="140" font-family="'PingFang SC','Microsoft YaHei',sans-serif"
+        font-size="12" fill="#BDBDBD" text-anchor="middle">暂无行程</text>
+</svg>

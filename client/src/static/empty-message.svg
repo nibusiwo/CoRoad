@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" fill="none">
+  <!-- Chat bubble -->
+  <path d="M50 35L190 35Q196 35 196 41L196 96Q196 102 190 102L125 102L100 125L100 102L50 102Q44 102 44 96L44 41Q44 35 50 35Z"
+        fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Message dots -->
+  <circle cx="75" cy="68" r="6" fill="#E0E0E0"/>
+  <circle cx="100" cy="68" r="6" fill="#E0E0E0"/>
+  <circle cx="125" cy="68" r="6" fill="#E0E0E0"/>
+  <!-- Dot details (ellipsis typing indicator) -->
+  <text x="100" y="73" font-family="sans-serif" font-size="18" fill="#D0D0D0" text-anchor="middle" font-weight="700">. . .</text>
+  <!-- Text -->
+  <text x="100" y="145" font-family="'PingFang SC','Microsoft YaHei',sans-serif"
+        font-size="12" fill="#BDBDBD" text-anchor="middle">暂无消息</text>
+</svg>

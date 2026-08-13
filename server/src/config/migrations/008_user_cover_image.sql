@@ -1,0 +1,2 @@
+ALTER TABLE users
+  ADD COLUMN cover_image VARCHAR(500) DEFAULT NULL COMMENT '用户主页背景图URL' AFTER avatar;

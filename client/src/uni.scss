@@ -1,0 +1,8 @@
+/**
+ * uni-app 全局样式变量文件
+ * 此文件会被自动注入到每个页面的 scss 中
+ * 只放主题变量，不放组件样式，避免每个页面 wxss 膨胀
+ */
+
+/* uview-plus 主题变量（仅变量定义，约 6KB） */
+@import 'uview-plus/theme.scss';

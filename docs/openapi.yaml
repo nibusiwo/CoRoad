@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: CoRoad V1 API
+  version: 1.0.0
+  description: Versioned contract for the WeChat Mini Program, H5 preview, merchants, and operations console.
+servers:
+  - url: /api
+paths:
+  /auth/phone-login:
+    post:
+      summary: Phone verification-code login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PhoneLogin' }
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /auth/wechat-login:
+    post:
+      summary: WeChat Mini Program login
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /upload:
+    post:
+      summary: Unified authenticated upload
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /orders/{id}/pay:
+    post:
+      summary: Create payment parameters; order changes after verified callback only
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /orders/payment-callback:
+    post:
+      summary: WeChat Pay V3 callback (idempotent)
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /orders/verify:
+    post:
+      summary: Merchant order verification
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Success' }
+  /security/contacts:
+    get: { summary: List emergency contacts, security: [{ bearerAuth: [] }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+    post: { summary: Add emergency contact, security: [{ bearerAuth: [] }], responses: { '201': { $ref: '#/components/responses/Success' } } }
+  /security/sos:
+    post: { summary: Trigger SOS, security: [{ bearerAuth: [] }], responses: { '201': { $ref: '#/components/responses/Success' } } }
+  /support/notifications:
+    get: { summary: List notifications, security: [{ bearerAuth: [] }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+  /support/tickets:
+    get: { summary: List customer-service tickets, security: [{ bearerAuth: [] }], responses: { '200': { $ref: '#/components/responses/Success' } } }
+    post: { summary: Create customer-service ticket, security: [{ bearerAuth: [] }], responses: { '201': { $ref: '#/components/responses/Success' } } }
+  /admin/health:
+    get:
+      summary: Platform integration health
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { $ref: '#/components/responses/Success' }, '503': { $ref: '#/components/responses/Success' } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: integer } }
+  schemas:
+    PhoneLogin:
+      type: object
+      required: [phone, code]
+      properties:
+        phone: { type: string, example: '13800138000' }
+        code: { type: string, example: '123456' }
+    ApiResponse:
+      type: object
+      properties:
+        code: { type: integer, example: 0 }
+        message: { type: string }
+        data: { type: object, nullable: true }
+  responses:
+    Success:
+      description: Standard response envelope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiResponse' }

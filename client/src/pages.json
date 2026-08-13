@@ -1,0 +1,339 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^u-(.*)": "uview-plus/components/u-$1/u-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/map/index",
+      "style": {
+        "navigationBarTitleText": "地图",
+        "navigationStyle": "custom",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/message/index",
+      "style": {
+        "navigationBarTitleText": "消息"
+      }
+    },
+    {
+      "path": "pages/message/chat",
+      "style": {
+        "navigationBarTitleText": "聊天"
+      }
+    },
+    {
+      "path": "pages/message/session-info",
+      "style": {
+        "navigationBarTitleText": "聊天信息"
+      }
+    },
+    {
+      "path": "pages/trip/index",
+      "style": {
+        "navigationBarTitleText": "行程",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    {
+      "path": "pages/trip/create",
+      "style": {
+        "navigationBarTitleText": "发起行程",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    {
+      "path": "pages/trip/detail",
+      "style": {
+        "navigationBarTitleText": "行程详情",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    {
+      "path": "pages/trip/next",
+      "style": {
+        "navigationBarTitleText": "下一段行程",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    {
+      "path": "pages/trip/my",
+      "style": {
+        "navigationBarTitleText": "我的行程",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    {
+      "path": "pages/trip/teams",
+      "style": {
+        "navigationBarTitleText": "我的车队",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    }
+  ],
+  "subPackages": [
+    {
+      "root": "pages/group-buy",
+      "pages": [
+        {
+          "path": "index",
+          "style": {
+            "navigationBarTitleText": "团购"
+          }
+        },
+        {
+          "path": "detail",
+          "style": {
+            "navigationBarTitleText": "商品详情"
+          }
+        },
+        {
+          "path": "activity",
+          "style": {
+            "navigationBarTitleText": "拼团活动"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/order",
+      "pages": [
+        {
+          "path": "index",
+          "style": {
+            "navigationBarTitleText": "订单"
+          }
+        },
+        {
+          "path": "detail",
+          "style": {
+            "navigationBarTitleText": "订单详情"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/user",
+      "pages": [
+        {
+          "path": "home",
+          "style": {
+            "navigationBarTitleText": "用户主页"
+          }
+        },
+        {
+          "path": "invite",
+          "style": {
+            "navigationBarTitleText": "邀请好友"
+          }
+        },
+        {
+          "path": "coupons",
+          "style": {
+            "navigationBarTitleText": "优惠券"
+          }
+        },
+        {
+          "path": "certify",
+          "style": {
+            "navigationBarTitleText": "车主认证"
+          }
+        },
+        {
+          "path": "badges",
+          "style": {
+            "navigationBarTitleText": "勋章墙"
+          }
+        },
+        {
+          "path": "blacklist",
+          "style": {
+            "navigationBarTitleText": "黑名单"
+          }
+        },
+        {
+          "path": "emergency-contacts",
+          "style": {
+            "navigationBarTitleText": "紧急联系人"
+          }
+        },
+        {
+          "path": "credit-score",
+          "style": {
+            "navigationBarTitleText": "信用分"
+          }
+        },
+        {
+          "path": "follows",
+          "style": {
+            "navigationBarTitleText": "关注 / 粉丝"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/settings",
+      "pages": [
+        {
+          "path": "index",
+          "style": {
+            "navigationBarTitleText": "设置"
+          }
+        },
+        {
+          "path": "privacy",
+          "style": {
+            "navigationBarTitleText": "隐私设置"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/merchant",
+      "pages": [
+        {
+          "path": "detail",
+          "style": {
+            "navigationBarTitleText": "商户详情"
+          }
+        },
+        {
+          "path": "manage",
+          "style": {
+            "navigationBarTitleText": "商家管理"
+          }
+        },
+        {
+          "path": "products",
+          "style": {
+            "navigationBarTitleText": "商品管理"
+          }
+        },
+        {
+          "path": "orders",
+          "style": {
+            "navigationBarTitleText": "订单管理"
+          }
+        },
+        {
+          "path": "settlement",
+          "style": {
+            "navigationBarTitleText": "结算记录"
+          }
+        },
+        {
+          "path": "promotion",
+          "style": {
+            "navigationBarTitleText": "推广码"
+          }
+        },
+        {
+          "path": "apply",
+          "style": {
+            "navigationBarTitleText": "商家入驻"
+          }
+        },
+        {
+          "path": "review",
+          "style": {
+            "navigationBarTitleText": "考核中心"
+          }
+        },
+        {
+          "path": "service",
+          "style": {
+            "navigationBarTitleText": "维修救援服务"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/notifications",
+      "pages": [
+        {
+          "path": "index",
+          "style": {
+            "navigationBarTitleText": "消息通知"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/support",
+      "pages": [
+        {
+          "path": "index",
+          "style": {
+            "navigationBarTitleText": "客服中心"
+          }
+        }
+      ]
+    },
+    {
+      "root": "pages/login",
+      "pages": [
+        {
+          "path": "index",
+          "style": {
+            "navigationBarTitleText": "登录",
+            "navigationStyle": "custom"
+          }
+        }
+      ]
+    }
+  ],
+  "preloadRule": {
+    "pages/mine/index": {
+      "network": "all",
+      "packages": ["pages/user", "pages/settings", "pages/order"]
+    }
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#07C160",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/map/index",
+        "text": "地图",
+        "iconPath": "static/tab/map.png",
+        "selectedIconPath": "static/tab/map-active.png"
+      },
+      {
+        "pagePath": "pages/message/index",
+        "text": "消息",
+        "iconPath": "static/tab/message.png",
+        "selectedIconPath": "static/tab/message-active.png"
+      },
+      {
+        "pagePath": "pages/trip/index",
+        "text": "行程",
+        "iconPath": "static/tab/trip.png",
+        "selectedIconPath": "static/tab/trip-active.png"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "static/tab/mine.png",
+        "selectedIconPath": "static/tab/mine-active.png"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "同道 CoRoad",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F5F5F5"
+  }
+}
