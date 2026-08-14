@@ -5,7 +5,7 @@
       <view class="scan-header">
         <text class="scan-title">扫码核销</text>
         <view class="scan-close" @click="handleClose">
-          <text>✕</text>
+          <text class="scan-close-icon">✕</text>
         </view>
       </view>
 
@@ -263,7 +263,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  text { font-size: 28rpx; color: #FFFFFF; }
+  .scan-close-icon { font-size: 28rpx; color: #FFFFFF; }
 }
 
 // ===== Camera Area =====

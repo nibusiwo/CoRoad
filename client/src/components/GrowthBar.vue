@@ -38,7 +38,7 @@
 </template>
 
 <script>
-module.exports = {
+export default {
   name: 'GrowthBar',
 
   props: {

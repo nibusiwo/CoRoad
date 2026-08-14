@@ -18,14 +18,14 @@
         <text>加载中...</text>
       </view>
 
-      <!-- Empty State -->
+      <!-- Empty State (inline, avoids component compat issues in MP) -->
       <view v-else-if="blockedUsers.length === 0" class="empty-state-wrap">
-        <EmptyState
-          icon="🚫"
-          title="黑名单为空"
-          description="你没有拉黑任何用户"
-          secondaryDescription="被拉黑的用户将无法与你互动"
-        />
+        <view class="empty-icon-wrap">
+          <text class="empty-icon">🚫</text>
+        </view>
+        <view class="empty-title">黑名单为空</view>
+        <view class="empty-description">你没有拉黑任何用户</view>
+        <view class="empty-secondary">被拉黑的用户将无法与你互动</view>
       </view>
 
       <!-- Blocked Users List -->
@@ -103,7 +103,7 @@ function handleUnblock(user) {
     success: async (resModal) => {
       if (resModal.confirm) {
         try {
-          await api.post('/users/unblock', { userId: user.id || user.userId });
+          await api.delete(`/users/block/${user.id || user.userId}`);
           const index = blockedUsers.value.findIndex(u => (u.id || u.userId) === (user.id || user.userId));
           if (index !== -1) blockedUsers.value.splice(index, 1);
           uni.showToast({ title: '已解除拉黑', icon: 'success' });
@@ -173,7 +173,55 @@ onShow(async () => {
 }
 
 .empty-state-wrap {
-  padding-top: 80rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 40rpx;
+  text-align: center;
+}
+
+.empty-icon-wrap {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  background-color: #F0F0F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32rpx;
+}
+
+.empty-icon {
+  font-size: 72rpx;
+}
+
+.empty-title,
+.empty-description,
+.empty-secondary {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1A1A1A;
+  margin-bottom: 12rpx;
+}
+
+.empty-description {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.6;
+  margin-bottom: 8rpx;
+}
+
+.empty-secondary {
+  font-size: 22rpx;
+  color: #999999;
+  margin-bottom: 40rpx;
 }
 
 // ===== User Card =====

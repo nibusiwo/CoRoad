@@ -3,7 +3,7 @@
     <view class="popup-container" @tap.stop :class="{ 'popup-enter': visible, 'popup-leave': !visible }">
       <!-- ==================== Close Button ==================== -->
       <view class="popup-close" @tap="onClose">
-        <text>✕</text>
+        <text class="popup-close-icon">✕</text>
       </view>
 
       <!-- ==================== User Header ==================== -->
@@ -17,10 +17,10 @@
           <view class="popup-name-row">
             <text class="popup-nickname">{{ user.nickname || '未知用户' }}</text>
             <view class="popup-level" v-if="user.level">
-              <text>Lv.{{ user.level }}</text>
+              <text class="popup-level-text">Lv.{{ user.level }}</text>
             </view>
             <view class="popup-cert" v-if="user.isCertified">
-              <text>✓ 已认证</text>
+              <text class="popup-cert-text">✓ 已认证</text>
             </view>
           </view>
           <text class="popup-level-name" v-if="user.levelName">{{ user.levelName }}</text>
@@ -61,7 +61,7 @@
         </view>
         <!-- B2: 队长专属 - 设为集合点 -->
         <view class="popup-btn meetup-btn" v-if="user.isLeader && !user.isMe" @tap="onSetMeetup">
-          <text>🚩 设为集合点</text>
+          <text class="meetup-btn-text">🚩 设为集合点</text>
         </view>
       </view>
 
@@ -112,11 +112,11 @@
             <text class="merchant-original-price" v-if="user.originalPrice">¥{{ user.originalPrice }}</text>
           </view>
           <view class="merchant-tag" v-if="user.discountTag">
-            <text>{{ user.discountTag }}</text>
+            <text class="merchant-tag-text">{{ user.discountTag }}</text>
           </view>
         </view>
         <view class="merchant-group-count" v-if="user.groupCount">
-          <text>{{ user.groupCount }}人正在拼团</text>
+          <text class="merchant-group-count-text">{{ user.groupCount }}人正在拼团</text>
         </view>
       </view>
       <view class="popup-actions" v-if="type === 'merchant'">
@@ -131,11 +131,11 @@
       <!-- POI -->
       <view class="popup-poi-info" v-if="type === 'poi'">
         <view class="poi-type-tag" v-if="user.poiType">
-          <text>{{ poiTypeName(user.poiType) }}</text>
+          <text class="poi-type-tag-text">{{ poiTypeName(user.poiType) }}</text>
         </view>
         <text class="poi-desc" v-if="user.subtitle || user.description">{{ user.subtitle || user.description }}</text>
         <view class="poi-chat-hint" v-if="user.hasChatRoom">
-          <text>💬 附近有位置聊天室</text>
+          <text class="poi-chat-hint-text">💬 附近有位置聊天室</text>
         </view>
       </view>
       <view class="popup-actions" v-if="type === 'poi'">
@@ -150,7 +150,7 @@
       <!-- ==================== B5: Merchant POI (gas/charge/food/hotel) ==================== -->
       <view class="popup-merchant-poi-info" v-if="type === 'merchant_poi'">
         <view class="mpoi-type-tag" v-if="user.poiType">
-          <text>{{ poiTypeName(user.poiType) }}</text>
+          <text class="mpoi-type-tag-text">{{ poiTypeName(user.poiType) }}</text>
         </view>
         <view class="mpoi-rating-row" v-if="user.rating || user.distance">
           <text class="mpoi-rating" v-if="user.rating">★ {{ user.rating }}</text>
@@ -202,7 +202,7 @@
           <text class="mp-text">{{ user.messagePreview.content }}</text>
         </view>
         <view class="mp-time" v-if="user.messagePreview.time">
-          <text>{{ formatTime(user.messagePreview.time) }}</text>
+          <text class="mp-time-text">{{ formatTime(user.messagePreview.time) }}</text>
         </view>
       </view>
 
@@ -514,7 +514,7 @@ export default {
   border-radius: 50%;
   z-index: 10;
 
-  text {
+  .popup-close-icon {
     font-size: 24rpx;
     color: #999;
   }
@@ -570,7 +570,7 @@ export default {
   border-radius: 12rpx;
   flex-shrink: 0;
 
-  text {
+  .popup-level-text {
     font-size: 20rpx;
     color: #FFFFFF;
     font-weight: 700;
@@ -583,7 +583,7 @@ export default {
   border-radius: 10rpx;
   flex-shrink: 0;
 
-  text {
+  .popup-cert-text {
     font-size: 18rpx;
     color: #07C160;
     font-weight: 600;
@@ -596,7 +596,7 @@ export default {
   color: #FFFFFF !important;
   border: none !important;
 
-  text {
+  .meetup-btn-text {
     color: #FFFFFF !important;
     font-weight: 600;
   }
@@ -729,7 +729,7 @@ export default {
   border-radius: 8rpx;
   margin-top: 4rpx;
 
-  text {
+  .merchant-tag-text {
     font-size: 20rpx;
     color: #FFFFFF;
     font-weight: 600;
@@ -737,7 +737,7 @@ export default {
 }
 
 .merchant-group-count {
-  text {
+  .merchant-group-count-text {
     font-size: 24rpx;
     color: #FF6B35;
     font-weight: 500;
@@ -761,7 +761,7 @@ export default {
   background: #E8F5E9;
   border-radius: 10rpx;
 
-  text {
+  .poi-type-tag-text {
     font-size: 22rpx;
     color: #07C160;
     font-weight: 600;
@@ -777,7 +777,7 @@ export default {
 .poi-chat-hint {
   margin-top: 4rpx;
 
-  text {
+  .poi-chat-hint-text {
     font-size: 24rpx;
     color: #9B59B6;
   }
@@ -897,7 +897,7 @@ export default {
   background: #E8F5E9;
   border-radius: 10rpx;
 
-  text {
+  .mpoi-type-tag-text {
     font-size: 22rpx;
     color: #07C160;
     font-weight: 600;
@@ -1057,7 +1057,7 @@ export default {
 .mp-time {
   margin-top: 8rpx;
 
-  text {
+  .mp-time-text {
     font-size: 20rpx;
     color: #BBB;
   }

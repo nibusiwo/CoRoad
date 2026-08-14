@@ -18,6 +18,7 @@ const {
   unfollow,
   blockUser,
   unblockUser,
+  getBlockedUsers,
   dailyCheckin
 } = require('../controllers/userController');
 
@@ -117,6 +118,12 @@ router.post('/block', auth, blockUser);
  * 取消屏蔽
  */
 router.delete('/block/:userId', auth, unblockUser);
+
+/**
+ * GET /api/users/blocked-list
+ * 获取屏蔽列表
+ */
+router.get('/blocked-list', auth, getBlockedUsers);
 
 /**
  * POST /api/users/checkin

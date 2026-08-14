@@ -20,7 +20,7 @@
       class="empty-action"
       @click="handleAction"
     >
-      <text>{{ actionText }}</text>
+      <text class="empty-action-text">{{ actionText }}</text>
     </view>
 
     <!-- ==================== Secondary Action ==================== -->
@@ -33,7 +33,7 @@
 </template>
 
 <script>
-module.exports = {
+export default {
   name: 'EmptyState',
 
   props: {
@@ -151,7 +151,7 @@ module.exports = {
   width: 160rpx;
   height: 160rpx;
   border-radius: 50%;
-  background-color: var(--color-divider);
+  background-color: #F0F0F0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -164,16 +164,16 @@ module.exports = {
 
 // ==================== Title ====================
 .empty-title {
-  font-size: var(--font-lg);
+  font-size: 32rpx;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: #1A1A1A;
   margin-bottom: 12rpx;
 }
 
 // ==================== Description ====================
 .empty-description {
-  font-size: var(--font-sm);
-  color: var(--color-text-secondary);
+  font-size: 26rpx;
+  color: #666666;
   line-height: 1.6;
   margin-bottom: 8rpx;
   max-width: 480rpx;
@@ -181,8 +181,8 @@ module.exports = {
 
 // ==================== Secondary Description ====================
 .empty-secondary {
-  font-size: var(--font-xs);
-  color: var(--color-text-hint);
+  font-size: 22rpx;
+  color: #999999;
   margin-bottom: 40rpx;
   max-width: 480rpx;
 }
@@ -194,13 +194,13 @@ module.exports = {
   justify-content: center;
   height: 80rpx;
   padding: 0 48rpx;
-  background: linear-gradient(135deg, var(--color-primary), #05A84E);
+  background: linear-gradient(135deg, #07C160, #05A84E);
   border-radius: 44rpx;
   box-shadow: 0 6rpx 20rpx rgba(7, 193, 96, 0.3);
   margin-bottom: 16rpx;
 
-  text {
-    font-size: var(--font-md);
+  .empty-action-text {
+    font-size: 28rpx;
     color: #FFFFFF;
     font-weight: 600;
   }
@@ -212,8 +212,8 @@ module.exports = {
 
 // ==================== Secondary Action ====================
 .empty-secondary-action {
-  font-size: var(--font-sm);
-  color: var(--color-primary);
+  font-size: 26rpx;
+  color: #07C160;
   font-weight: 500;
   padding: 8rpx 16rpx;
 

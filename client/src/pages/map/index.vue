@@ -176,7 +176,7 @@
           <u-icon name="pushpin" size="36" color="#FF6B35" />
           <text class="action-btn-text">报位置</text>
         </view>
-        <view class="action-btn sos" @touchstart="onSosStart" @touchend="onSosEnd" @touchcancel="onSosEnd">
+        <view class="action-btn sos" @tap="onSosTap" @touchstart="onSosStart" @touchend="onSosEnd" @touchcancel="onSosEnd">
           <u-icon name="warning" size="36" color="#E74C3C" />
           <text class="action-btn-text">SOS</text>
         </view>
@@ -2254,6 +2254,12 @@ export default {
           this.sosConfirming = true;
         }
       }, 3000);
+    },
+
+    /** 点击 SOS 立即弹出确认框(同时保留长按触发) */
+    onSosTap() {
+      if (this.sosConfirming) return;
+      this.sosConfirming = true;
     },
 
     onSosEnd() {

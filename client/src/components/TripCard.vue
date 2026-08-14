@@ -103,7 +103,7 @@
 </template>
 
 <script>
-module.exports = {
+export default {
   name: 'TripCard',
 
   props: {
@@ -235,7 +235,9 @@ module.exports = {
     flex: 1;
     min-width: 0;
 
-    text {
+    .compact-start,
+    .compact-arrow,
+    .compact-end {
       font-size: var(--font-sm);
     }
 
@@ -269,7 +271,8 @@ module.exports = {
     gap: 12rpx;
     flex-shrink: 0;
 
-    text {
+    .compact-time,
+    .compact-cars {
       font-size: 20rpx;
       color: var(--color-text-hint);
     }

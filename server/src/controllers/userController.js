@@ -824,6 +824,38 @@ const unblockUser = async (req, res, next) => {
 };
 
 // ---------------------------------------------------------------------------
+// 15.5. getBlockedUsers — get blocked user list
+// ---------------------------------------------------------------------------
+const getBlockedUsers = async (req, res, next) => {
+  try {
+    const userId = req.userId;
+
+    const [rows] = await pool.query(
+      `SELECT ub.blocked_id, ub.created_at AS block_date,
+              u.id, u.nickname, u.avatar, u.phone
+       FROM user_blocks ub
+       LEFT JOIN users u ON ub.blocked_id = u.id
+       WHERE ub.blocker_id = ?
+       ORDER BY ub.created_at DESC`,
+      [userId]
+    );
+
+    const records = rows.map(r => ({
+      id: r.blocked_id,
+      nickname: r.nickname || '车友',
+      avatar: r.avatar || '',
+      phone: r.phone || '',
+      blockDate: r.block_date,
+      blockedAt: r.block_date
+    }));
+
+    res.json(ApiResponse.success(records));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ---------------------------------------------------------------------------
 // 16. dailyCheckin — daily check-in, award growth value
 // ---------------------------------------------------------------------------
 const dailyCheckin = async (req, res, next) => {
@@ -896,5 +928,6 @@ module.exports = {
   unfollow,
   blockUser,
   unblockUser,
+  getBlockedUsers,
   dailyCheckin
 };
