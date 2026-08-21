@@ -61,12 +61,14 @@
 
         <!-- 他人消息（左侧） -->
         <view v-if="msg.type !== 'system' && !msg.mine" class="msg-row msg-left">
-          <image
+                    <view class="msg-avatar">
+            <local-image style="width:100%;height:100%;"
             :src="msg.avatar || '/static/default-avatar.png'"
-            class="msg-avatar"
+           
             mode="aspectFill"
             @click="onAvatarTap(msg)"
-          />
+           />
+          </view>
           <view class="msg-body-left">
             <text v-if="showNicknames" class="msg-nickname">{{ msg.nickname }}</text>
             <!-- 文本消息 -->
@@ -101,15 +103,17 @@
             </view>
             <!-- 位置消息 -->
             <view v-else-if="msg.type === 'location'" class="msg-location-card" @click="openLocation(msg)">
-              <image
+                            <view class="location-thumb">
+                <local-image style="width:100%;height:100%;"
                 v-if="getMapThumbnail(msg)"
                 :src="getMapThumbnail(msg)"
-                class="location-thumb"
+               
                 mode="aspectFill"
-              />
-              <view v-else class="location-thumb location-thumb-fallback">
-                <text class="fallback-icon">📍</text>
-                <text class="fallback-coords">{{ msg.latitude && msg.longitude ? msg.latitude.toFixed(4) + ', ' + msg.longitude.toFixed(4) : '' }}</text>
+               />
+                <view v-else class="location-thumb location-thumb-fallback">
+                  <text class="fallback-icon">📍</text>
+                  <text class="fallback-coords">{{ msg.latitude && msg.longitude ? msg.latitude.toFixed(4) + ', ' + msg.longitude.toFixed(4) : '' }}</text>
+                </view>
               </view>
               <view class="location-info">
                 <text class="location-name">{{ msg.locationName || '位置信息' }}</text>
@@ -118,11 +122,13 @@
             </view>
             <!-- 拼团分享消息 -->
             <view v-else-if="msg.type === 'group_buy'" class="msg-group-buy-card" @click="openGroupBuy(msg)">
-              <image
+                            <view class="gb-thumb">
+                <local-image style="width:100%;height:100%;"
                 :src="msg.productImage || ''"
-                class="gb-thumb"
+               
                 mode="aspectFill"
-              />
+               />
+              </view>
               <view class="gb-info">
                 <text class="gb-title text-ellipsis-2">{{ msg.productTitle || '拼团商品' }}</text>
                 <view class="gb-bottom">
@@ -169,15 +175,17 @@
             </view>
             <!-- 位置消息 -->
             <view v-else-if="msg.type === 'location'" class="msg-location-card" @click="openLocation(msg)">
-              <image
+                            <view class="location-thumb">
+                <local-image style="width:100%;height:100%;"
                 v-if="getMapThumbnail(msg)"
                 :src="getMapThumbnail(msg)"
-                class="location-thumb"
+               
                 mode="aspectFill"
-              />
-              <view v-else class="location-thumb location-thumb-fallback">
-                <text class="fallback-icon">📍</text>
-                <text class="fallback-coords">{{ msg.latitude && msg.longitude ? msg.latitude.toFixed(4) + ', ' + msg.longitude.toFixed(4) : '' }}</text>
+               />
+                <view v-else class="location-thumb location-thumb-fallback">
+                  <text class="fallback-icon">📍</text>
+                  <text class="fallback-coords">{{ msg.latitude && msg.longitude ? msg.latitude.toFixed(4) + ', ' + msg.longitude.toFixed(4) : '' }}</text>
+                </view>
               </view>
               <view class="location-info">
                 <text class="location-name">{{ msg.locationName || '位置信息' }}</text>
@@ -186,11 +194,13 @@
             </view>
             <!-- 拼团分享消息 -->
             <view v-else-if="msg.type === 'group_buy'" class="msg-group-buy-card" @click="openGroupBuy(msg)">
-              <image
+                            <view class="gb-thumb">
+                <local-image style="width:100%;height:100%;"
                 :src="msg.productImage || ''"
-                class="gb-thumb"
+               
                 mode="aspectFill"
-              />
+               />
+              </view>
               <view class="gb-info">
                 <text class="gb-title text-ellipsis-2">{{ msg.productTitle || '拼团商品' }}</text>
                 <view class="gb-bottom">
@@ -1334,6 +1344,7 @@ export default {
     border-radius: 8rpx;
     flex-shrink: 0;
     margin-top: 4rpx;
+    overflow: hidden;
   }
 
   .msg-body-left {

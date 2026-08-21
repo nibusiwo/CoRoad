@@ -8,11 +8,13 @@
 
       <!-- ==================== User Header ==================== -->
       <view class="popup-header">
-        <image
-          class="popup-avatar"
+                <view class="popup-avatar">
+          <local-image style="width:100%;height:100%;"
+         
           :src="user.avatar || '/static/default-avatar.png'"
           mode="aspectFill"
-        />
+         />
+        </view>
         <view class="popup-user-info">
           <view class="popup-name-row">
             <text class="popup-nickname">{{ user.nickname || '未知用户' }}</text>
@@ -539,7 +541,8 @@ export default {
   background: #F5F5F5;
   border: 3rpx solid #F0F0F0;
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .popup-user-info {
   flex: 1;

@@ -103,14 +103,17 @@ function amapGet(path, params) {
     .join('&');
   const url = `https://restapi.amap.com${path}?${query}`;
   return new Promise((resolve, reject) => {
-    https.get(url, { timeout: 8000 }, (res) => {
+    const req = https.get(url, { timeout: 8000 }, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
         try { resolve(JSON.parse(data)); }
         catch (e) { reject(new Error(`JSON parse error: ${e.message}`)); }
       });
-    }).on('error', reject).on('timeout', (req) => { req.destroy(); reject(new Error('timeout')); });
+    });
+    req.on('error', reject);
+    // timeout 事件回调不带参数，需通过闭包持有 req 来销毁连接
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
   });
 }
 

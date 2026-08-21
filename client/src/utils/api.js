@@ -12,10 +12,13 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /* #ifdef MP-WEIXIN */
 // 微信小程序 <image> 只支持 HTTPS 地址。
-// 本地开发默认连 localhost:3443（配合开发者工具“不校验合法域名”），
-// 正式构建时通过环境变量注入线上域名：
-//   $env:VITE_API_BASE_URL='https://api.你的域名.com/api'; npm.cmd run build:mp-weixin
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://77d43be.r28.cpolar.top/api').replace(/\/+$/, '');
+  // 默认使用 ngrok 静态域名（手机真机/体验版需访问公网域名）：
+  //   https://patronage-native-impeding.ngrok-free.dev
+  // 如需切换域名，通过环境变量注入：
+  //   $env:VITE_API_BASE_URL='https://你的域名/api'; npm.cmd run build:mp-weixin
+  // 注意：若默认值使用 localhost，手机真机上 localhost 指向手机本身，
+  // 会导致接口无法访问、登录失败（仅微信开发者工具内可用）。
+  const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://patronage-native-impeding.ngrok-free.dev/api').replace(/\/+$/, '');
 /* #endif */
 
 /* #ifndef H5 || MP-WEIXIN */
@@ -36,6 +39,10 @@ const UPLOAD_BASE_URL = '';
 
 // 请求超时时间（毫秒）
 const TIMEOUT = 30000;
+
+// ngrok 免费版浏览器确认页跳过请求头
+// 仅当 API 走 ngrok 域名时携带，其他环境不添加
+const NGROK_SKIP_WARNING = BASE_URL.includes('ngrok') ? { 'ngrok-skip-browser-warning': 'true' } : {};
 
 // 是否显示 loading 的阈值（毫秒），超过此时间的请求会显示 loading
 const LOADING_THRESHOLD = 800;
@@ -196,6 +203,7 @@ function request(options) {
     // 构建请求头
     const headers = {
       'Content-Type': 'application/json',
+      ...NGROK_SKIP_WARNING,
       ...header
     };
 
@@ -285,6 +293,7 @@ function request(options) {
       },
       fail: (err) => {
         hideLoading();
+        console.error('[API] request failed:', requestUrl, err);
         if (showError) {
           uni.showToast({
             title: '网络异常，请检查网络连接',
@@ -337,7 +346,9 @@ function upload(url, filePath, formData, options) {
       showLoading(loadingText);
     }
 
-    const headers = {};
+    const headers = {
+      ...NGROK_SKIP_WARNING
+    };
     if (auth) {
       const token = getToken();
       if (token) {

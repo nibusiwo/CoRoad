@@ -66,11 +66,13 @@
           class="item-card"
           @click="goUser(user)"
         >
-          <image
+                    <view class="item-avatar">
+            <local-image style="width:100%;height:100%;"
             :src="resolveAssetUrl(user.avatar) || '/static/default-avatar.png'"
-            class="item-avatar"
+           
             mode="aspectFill"
-          />
+           />
+          </view>
           <view class="item-info">
             <view class="item-name-row">
               <text class="item-name">{{ user.nickname || '用户' }}</text>
@@ -305,6 +307,7 @@ export default {
     border-radius: 50%;
     background: #F0F0F0;
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   .team-avatar {

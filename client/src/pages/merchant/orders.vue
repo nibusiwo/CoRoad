@@ -57,19 +57,23 @@
         </view>
 
         <view class="card-body">
-          <image
+                    <view class="product-thumb">
+            <local-image style="width:100%;height:100%;"
             :src="resolveAssetUrl(order.productImage) || '/static/default-product.png'"
-            class="product-thumb"
+           
             mode="aspectFill"
-          />
+           />
+          </view>
           <view class="order-info">
             <text class="product-name">{{ order.productName || '商品名称' }}</text>
             <view class="user-row">
-              <image
+                            <view class="user-avatar">
+                <local-image style="width:100%;height:100%;"
             :src="resolveAssetUrl(order.userAvatar) || '/static/default-avatar.png'"
-                class="user-avatar"
+               
                 mode="aspectFill"
-              />
+               />
+              </view>
               <text class="user-nickname">{{ order.userNickname || '用户' }}</text>
             </view>
             <view class="amount-row">
@@ -113,7 +117,9 @@
           <view class="detail-section">
             <text class="detail-label">用户信息</text>
             <view class="user-detail">
-  <image :src="resolveAssetUrl(currentOrder.userAvatar) || '/static/default-avatar.png'" class="ud-avatar" mode="aspectFill" />
+    <view class="ud-avatar">
+    <local-image style="width:100%;height:100%;" :src="resolveAssetUrl(currentOrder.userAvatar) || '/static/default-avatar.png'" mode="aspectFill"  />
+  </view>
               <text class="ud-name">{{ currentOrder.userNickname || '用户' }}</text>
             </view>
           </view>
@@ -519,7 +525,8 @@ onShow(() => {
   border-radius: 12rpx;
   background-color: #F5F5F5;
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .order-info {
   flex: 1;
@@ -550,7 +557,8 @@ onShow(() => {
   height: 36rpx;
   border-radius: 50%;
   background-color: #F0F0F0;
-}
+    overflow: hidden;
+  }
 
 .user-nickname {
   font-size: 24rpx;
@@ -684,7 +692,9 @@ onShow(() => {
   display: flex;
   align-items: center;
   gap: 12rpx;
-  .ud-avatar { width: 56rpx; height: 56rpx; border-radius: 50%; background-color: #F0F0F0; }
+  .ud-avatar { width: 56rpx; height: 56rpx; border-radius: 50%; background-color: #F0F0F0;
+    overflow: hidden;
+  }
   .ud-name { font-size: 28rpx; color: #333; font-weight: 500; }
 }
 

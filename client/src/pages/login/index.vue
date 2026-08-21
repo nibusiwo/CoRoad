@@ -251,7 +251,7 @@ export default {
         // Step 1: Get WeChat login code
         const loginRes = await this.wxLogin();
         const code = loginRes.code;
-
+        console.log('[WeChat Login] wx.login success, code length:', code ? code.length : 0);
         if (!code) {
           throw new Error('获取微信授权失败');
         }

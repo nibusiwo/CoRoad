@@ -10,12 +10,16 @@
         <!-- ==================== Header ==================== -->
         <view class="header-section">
           <view class="header-bg">
-            <image v-if="merchant.coverImage" :src="merchant.coverImage" class="header-cover" mode="aspectFill" />
-            <view v-else class="header-cover-placeholder"></view>
+                        <view class="header-cover">
+              <local-image style="width:100%;height:100%;" v-if="merchant.coverImage" :src="merchant.coverImage" mode="aspectFill"  />
+              <view v-else class="header-cover-placeholder"></view>
+            </view>
           </view>
 
           <view class="header-info">
-  <image :src="resolveAssetUrl(merchant.logo) || '/static/default-merchant.png'" class="merchant-logo" mode="aspectFill" />
+    <view class="merchant-logo">
+    <local-image style="width:100%;height:100%;" :src="resolveAssetUrl(merchant.logo) || '/static/default-merchant.png'" mode="aspectFill"  />
+  </view>
             <view class="merchant-detail">
               <view class="name-row">
                 <text class="merchant-name">{{ merchant.name }}</text>
@@ -74,7 +78,9 @@
           </view>
 
           <view v-for="order in recentOrders" :key="order.id" class="order-item" @click="goOrderDetail(order)">
-  <image :src="resolveAssetUrl(order.productImage) || '/static/default-product.png'" class="order-img" mode="aspectFill" />
+    <view class="order-img">
+    <local-image style="width:100%;height:100%;" :src="resolveAssetUrl(order.productImage) || '/static/default-product.png'" mode="aspectFill"  />
+  </view>
             <view class="order-info">
               <text class="order-product">{{ order.productName }}</text>
               <text class="order-user">{{ order.userNickname }}</text>
@@ -97,7 +103,9 @@
           </view>
 
           <view v-for="product in activeProducts" :key="product.id" class="product-item">
-  <image :src="resolveAssetUrl(product.image) || '/static/default-product.png'" class="product-img" mode="aspectFill" />
+    <view class="product-img">
+    <local-image style="width:100%;height:100%;" :src="resolveAssetUrl(product.image) || '/static/default-product.png'" mode="aspectFill"  />
+  </view>
             <view class="product-info">
               <text class="product-name">{{ product.name }}</text>
               <view class="product-tiers" v-if="product.tiers && product.tiers.length">
@@ -285,7 +293,8 @@ onShow(async () => {
   background-color: #F0F0F0;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .merchant-detail {
   flex: 1;
@@ -500,7 +509,8 @@ onShow(async () => {
   border-radius: 12rpx;
   background-color: #F5F5F5;
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .order-info {
   flex: 1;
@@ -563,7 +573,8 @@ onShow(async () => {
   border-radius: 12rpx;
   background-color: #F5F5F5;
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .product-info {
   flex: 1;

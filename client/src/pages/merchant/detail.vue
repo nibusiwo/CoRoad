@@ -10,21 +10,25 @@
         <!-- ==================== Header ==================== -->
         <view class="merchant-header">
           <!-- Cover Image -->
-          <image
+                    <view class="header-cover">
+            <local-image style="width:100%;height:100%;"
             v-if="merchant.coverImage"
             :src="merchant.coverImage"
-            class="header-cover"
+           
             mode="aspectFill"
-          />
-          <view v-else class="header-cover-placeholder"></view>
+           />
+            <view v-else class="header-cover-placeholder"></view>
+          </view>
 
           <!-- Info Overlay -->
           <view class="header-info">
-            <image
+                        <view class="header-logo">
+              <local-image style="width:100%;height:100%;"
             :src="resolveAssetUrl(merchant.logo) || '/static/default-avatar.png'"
-              class="header-logo"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="header-text">
               <view class="header-name-row">
                 <text class="header-name">{{ merchant.name }}</text>
@@ -91,11 +95,13 @@
               class="product-card"
               @click="goToProduct(product.id)"
             >
-              <image
+                            <view class="product-image">
+                <local-image style="width:100%;height:100%;"
             :src="resolveAssetUrl(product.image) || '/static/default-product.png'"
-                class="product-image"
+               
                 mode="aspectFill"
-              />
+               />
+              </view>
               <view class="product-info">
                 <text class="product-name">{{ product.name }}</text>
 
@@ -151,14 +157,18 @@
             <text class="section-count">{{ merchant.photos.length }}张</text>
           </view>
           <view class="gallery-grid">
-            <image
+                        <view
+              class="gallery-image"
               v-for="(photo, index) in merchant.photos"
               :key="index"
-              :src="photo"
-              class="gallery-image"
-              mode="aspectFill"
-              @click="previewPhotos(index)"
-            />
+            >
+              <local-image
+                style="width:100%;height:100%;"
+                :src="photo"
+                mode="aspectFill"
+                @click="previewPhotos(index)"
+              />
+            </view>
           </view>
         </view>
 
@@ -381,7 +391,8 @@ export default {
   background-color: #F0F0F0;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .header-text {
   flex: 1;

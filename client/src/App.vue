@@ -13,6 +13,7 @@ let isManualClose = false
 
 onLaunch(() => {
   console.log('CoRoad App Launch')
+  console.log('[CoRoad] BUILD 2026-08-20-v4 local-image-fill')
   const token = uni.getStorageSync('token')
   if (!token) {
     // 无 token，同步跳转登录页（在页面渲染前完成，避免页面发起 API 请求）

@@ -15,11 +15,13 @@
         <view class="user-card-content">
           <!-- Avatar & Basic Info -->
           <view class="user-header">
-            <image
-              class="user-avatar"
-              :src="userStore.avatar"
-              mode="aspectFill"
-            />
+            <view class="user-avatar">
+              <local-image
+                style="width:100%;height:100%;"
+                :src="userStore.avatar"
+                mode="aspectFill"
+              />
+            </view>
             <view class="user-info">
               <view class="user-name-row">
                 <text class="user-nickname">{{ userStore.nickname }}</text>
@@ -693,6 +695,7 @@ export default {
   border: 4rpx solid rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .user-info {

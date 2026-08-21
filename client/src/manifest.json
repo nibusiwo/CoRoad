@@ -34,13 +34,6 @@
     ],
     "usingComponents": true,
     "lazyCodeLoading": "requiredComponents",
-    "sdkConfigs": {
-      "maps": {
-        "amap": {
-          "key": "your_amap_miniprogram_key"
-        }
-      }
-    }
   },
   "h5": {
     "devServer": {

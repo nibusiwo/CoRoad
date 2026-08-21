@@ -116,7 +116,13 @@ async function checkDetachedMembersOnce() {
       }
 
       const rawUpdateTime = lastPosition?.updateTime || lastPosition?.timestamp;
-      if (rawUpdateTime && new Date(rawUpdateTime) < silenceCutoff) {
+      const joinedAt = member.joined_at ? new Date(member.joined_at) : null;
+      // 新成员宽限期:加入行程不足24小时不判"超时退队",
+      // 避免用户在创建行程/刚加入时因旧位置数据被立即误踢。
+      if (joinedAt && joinedAt > noDataCutoff) {
+        // 刚加入的成员(24小时内):不因旧 last_position 立即退队
+        shouldDetach = false;
+      } else if (rawUpdateTime && new Date(rawUpdateTime) < silenceCutoff) {
         shouldDetach = true;
         detachReason = 'timeout';
       }

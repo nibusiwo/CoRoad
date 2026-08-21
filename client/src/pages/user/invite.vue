@@ -35,15 +35,17 @@
         <view class="qr-section card">
           <text class="qr-title">邀请二维码</text>
           <view class="qr-area">
-            <image
+                        <view class="qr-image">
+              <local-image style="width:100%;height:100%;"
               v-if="qrImage"
               :src="qrImage"
-              class="qr-image"
+             
               mode="aspectFit"
               @click="previewQr"
-            />
-            <view v-else class="qr-placeholder">
-              <text class="qr-loading">二维码生成中...</text>
+             />
+              <view v-else class="qr-placeholder">
+                <text class="qr-loading">二维码生成中...</text>
+              </view>
             </view>
             <text class="qr-desc">扫一扫，立刻加入</text>
           </view>
@@ -139,11 +141,13 @@
             :key="record.id"
             class="history-item"
           >
-            <image
+                        <view class="history-avatar">
+              <local-image style="width:100%;height:100%;"
             :src="resolveAssetUrl(record.avatar) || '/static/default-avatar.png'"
-              class="history-avatar"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="history-info">
               <text class="history-name">{{ record.nickname || '用户' }}</text>
               <text class="history-time">{{ formatTime(record.registerTime) }}</text>
@@ -756,7 +760,8 @@ export default {
   height: 72rpx;
   border-radius: 50%;
   background-color: #F0F0F0;
-}
+    overflow: hidden;
+  }
 
 .history-info {
   flex: 1;

@@ -108,11 +108,13 @@
         <!-- 队长信息 -->
         <view class="card-header">
           <view class="leader-info">
-            <image
+                        <view class="leader-avatar">
+              <local-image style="width:100%;height:100%;"
               :src="trip.captainAvatar || '/static/default-avatar.png'"
-              class="leader-avatar"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="leader-detail">
               <text class="leader-name">{{ trip.captainNickname || '队长' }}</text>
               <view class="leader-rating">
@@ -837,7 +839,8 @@ export default {
         height: 64rpx;
         border-radius: 50%;
         background-color: var(--color-divider);
-      }
+    overflow: hidden;
+  }
 
       .leader-detail {
         .leader-name {

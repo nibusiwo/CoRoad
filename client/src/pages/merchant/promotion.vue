@@ -97,7 +97,9 @@
           </view>
 
           <view v-for="user in invitedUsers" :key="user.id" class="user-item">
-            <image :src="resolveAssetUrl(user.avatar) || '/static/default-avatar.png'" class="user-avatar" mode="aspectFill" />
+                        <view class="user-avatar">
+              <local-image style="width:100%;height:100%;" :src="resolveAssetUrl(user.avatar) || '/static/default-avatar.png'" mode="aspectFill"  />
+            </view>
             <view class="user-info">
               <text class="user-nickname">{{ user.nickname || '车友' }}</text>
               <text class="user-date">{{ formatDate(user.registerDate) }} 注册</text>
@@ -446,7 +448,8 @@ onShareTimeline(() => {
   border-radius: 50%;
   background-color: #F0F0F0;
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .user-info {
   flex: 1;

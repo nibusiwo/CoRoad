@@ -28,11 +28,13 @@
             class="member-row"
             @click="goUser(member)"
           >
-            <image
+                        <view class="member-avatar">
+              <local-image style="width:100%;height:100%;"
               :src="member.avatar || '/static/default-avatar.png'"
-              class="member-avatar"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="member-info">
               <view class="member-name-row">
                 <text class="member-name">{{ member.nickname || '用户' }}</text>
@@ -242,6 +244,7 @@ export default {
     border-radius: 50%;
     background: #F0F0F0;
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   .member-info {

@@ -205,6 +205,11 @@ const sendCode = async (req, res, next) => {
 const wechatLogin = async (req, res, next) => {
   try {
     const { code, nickname, avatar } = req.body;
+    console.log('[WeChat] login request received:', {
+      hasCode: Boolean(code),
+      codeLength: code ? code.length : 0,
+      appId: config.wxpay.appId,
+    });
 
     if (!code) {
       return res.status(422).json(ApiResponse.fail('缺少登录凭证 code'));

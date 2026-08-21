@@ -39,11 +39,13 @@
 
       <!-- Leader Info -->
       <view class="card-leader" @click.stop="goToLeader">
-        <image
+                <view class="leader-avatar">
+          <local-image style="width:100%;height:100%;"
           :src="trip.captainAvatar || '/static/default-avatar.png'"
-          class="leader-avatar"
+         
           mode="aspectFill"
-        />
+         />
+        </view>
         <view class="leader-info">
           <view class="leader-name-row">
             <text class="leader-name">{{ trip.captainNickname || '未知车友' }}</text>
@@ -358,6 +360,7 @@ export default {
     border-radius: 50%;
     background-color: var(--color-divider);
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   .leader-info {

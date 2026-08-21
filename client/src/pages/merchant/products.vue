@@ -35,11 +35,13 @@
       <!-- Product Cards -->
       <view v-for="product in products" :key="product.id" class="product-card">
         <view class="card-main" @click="goEditProduct(product)">
-          <image
+                    <view class="product-image">
+            <local-image style="width:100%;height:100%;"
             :src="resolveAssetUrl(product.image) || '/static/default-product.png'"
-            class="product-image"
+           
             mode="aspectFill"
-          />
+           />
+          </view>
           <view class="product-info">
             <text class="product-name">{{ product.name }}</text>
             <view class="price-row">
@@ -271,7 +273,8 @@ onShow(async () => {
   border-radius: 12rpx;
   background-color: #F5F5F5;
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .product-info {
   flex: 1;

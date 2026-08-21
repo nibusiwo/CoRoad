@@ -10,11 +10,13 @@
         <!-- Activity Header -->
         <view class="activity-header">
           <view class="header-product-info">
-            <image
+                        <view class="header-product-img">
+              <local-image style="width:100%;height:100%;"
               :src="productImage || '/static/default-product.png'"
-              class="header-product-img"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="header-text">
               <text class="header-product-name">{{ activity.productName || '团购商品' }}</text>
               <text class="header-target">{{ activity.joinedCount || 0 }}/{{ activity.targetCount || 10 }}人</text>
@@ -58,13 +60,17 @@
           <text class="section-title">参团成员</text>
           <view class="participant-header-row">
             <view class="participant-avatars">
-              <image
+                            <view
+                class="participant-avatar"
                 v-for="(p, i) in participants"
                 :key="i"
-            :src="resolveAssetUrl(p.avatar) || '/static/default-avatar.png'"
-                class="participant-avatar"
-                mode="aspectFill"
-              />
+              >
+                <local-image
+                  style="width:100%;height:100%;"
+                  :src="resolveAssetUrl(p.avatar) || '/static/default-avatar.png'"
+                  mode="aspectFill"
+                />
+              </view>
               <view v-if="remainingSlots > 0" class="participant-slot empty-slot">
                 <text>?</text>
               </view>
@@ -174,7 +180,9 @@
         </view>
 
         <view class="join-product-row">
-          <image :src="productImage || '/static/default-product.png'" class="join-product-img" mode="aspectFill" />
+                    <view class="join-product-img">
+            <local-image style="width:100%;height:100%;" :src="productImage || '/static/default-product.png'" mode="aspectFill"  />
+          </view>
           <view class="join-product-info">
             <text class="join-product-name">{{ activity.productName || '拼团商品' }}</text>
             <text class="join-product-count">{{ participants.length }}人参团 · 还差{{ remainingSlots }}人成团</text>
@@ -765,7 +773,8 @@ export default {
   height: 96rpx;
   border-radius: 16rpx;
   background-color: rgba(255, 255, 255, 0.3);
-}
+    overflow: hidden;
+  }
 
 .header-text {
   flex: 1;
@@ -1303,7 +1312,8 @@ export default {
       border-radius: 16rpx;
       background: #E8E8E8;
       flex-shrink: 0;
-    }
+    overflow: hidden;
+  }
 
     .join-product-info {
       flex: 1;

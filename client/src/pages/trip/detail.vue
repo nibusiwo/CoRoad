@@ -55,11 +55,13 @@
         <!-- 队长信息卡片 -->
         <view class="leader-card card">
           <view class="leader-top" @click="goUserHome(trip.captainId)">
-            <image
+                        <view class="leader-avatar">
+              <local-image style="width:100%;height:100%;"
               :src="trip.captainAvatar || '/static/default-avatar.png'"
-              class="leader-avatar"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="leader-info">
               <view class="leader-name-row">
                 <text class="leader-name">{{ trip.captainNickname || '队长' }}</text>
@@ -89,13 +91,17 @@
           </view>
           <!-- 成员头像列表 -->
           <view v-if="members && members.length" class="member-avatars">
-            <image
+                        <view
+              class="member-thumb"
               v-for="(member, index) in members.slice(0, 8)"
               :key="member.id"
-              :src="member.avatar || '/static/default-avatar.png'"
-              class="member-thumb"
-              mode="aspectFill"
-            />
+            >
+              <local-image
+                style="width:100%;height:100%;"
+                :src="member.avatar || '/static/default-avatar.png'"
+                mode="aspectFill"
+              />
+            </view>
             <view v-if="members.length > 8" class="more-members">
               <text>+{{ members.length - 8 }}</text>
             </view>
@@ -115,11 +121,13 @@
             class="member-item"
             @click="goUserHome(member.userId)"
           >
-            <image
+                        <view class="member-avatar">
+              <local-image style="width:100%;height:100%;"
               :src="member.avatar || '/static/default-avatar.png'"
-              class="member-avatar"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="member-info">
               <view class="member-name-row">
                 <text class="member-name">{{ member.nickname }}</text>
@@ -636,6 +644,7 @@ export default {
       height: 88rpx;
       border-radius: 50%;
       background-color: var(--color-divider);
+      overflow: hidden;
     }
 
     .leader-info {
@@ -748,6 +757,7 @@ export default {
       border-radius: 50%;
       border: 3rpx solid #fff;
       margin-left: -12rpx;
+      overflow: hidden;
 
       &:first-child {
         margin-left: 0;
@@ -812,6 +822,7 @@ export default {
     height: 72rpx;
     border-radius: 50%;
     background-color: var(--color-divider);
+    overflow: hidden;
   }
 
   .member-info {

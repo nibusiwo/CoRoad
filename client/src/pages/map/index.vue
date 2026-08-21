@@ -419,7 +419,8 @@ export default {
 
       // 数据未变化时返回同一 marker 对象引用,避免 uni-h5 每次 props 更新都重建
       // ALWAYS callout(Text 叠加不清理会导致气泡重复堆积和卡顿)
-      return out;
+      // 统一规范化 id 为数字(微信小程序要求),同时不破坏 stableMarker 缓存 key
+      return out.map((m) => this._normalizeMarkerId(m));
     },
 
     /**
@@ -468,6 +469,11 @@ export default {
     this._mapDataFetching = false;
     this._locationFallback = false;
     this._routeFailNotified = false;
+    // 字符串 marker id(userId/merchantId/poiId 等可能是 MongoDB ObjectId)→ 负数数字 id 映射,
+    // 微信小程序 <map> 要求 marker id 为数字。_revIdMap 用于点击时反查原始 id。
+    this._stringIdMap = new Map();
+    this._revIdMap = new Map();
+    this._nextStringId = -3;
   },
 
   /**
@@ -491,7 +497,14 @@ export default {
   onShow() {
     // Refresh trip status when page shows
     if (this.userStore.isLoggedIn) {
-      this.tripStore.fetchCurrentTrip().catch(() => {});
+      this.tripStore.fetchCurrentTrip()
+        .then(() => {
+          // 行程可能在创建/编辑后变化,重新计算 Day 与剩余天数
+          if (this.tripStore.hasActiveTrip) {
+            this.calcTripCounters();
+          }
+        })
+        .catch(() => {});
       this.chatStore.fetchUnread().catch(() => {});
       this.fetchProfile();
     }
@@ -517,6 +530,32 @@ export default {
   },
 
   methods: {
+    /**
+     * 微信小程序 <map> 要求 marker.id 必须为数字。
+     * 数据源的 id(userId/merchantId/teamId/poiId/eventId/roomId 等)可能是字符串
+     * (如 MongoDB ObjectId),这里统一映射为稳定的负数数字 id。
+     * ID 空间约定:
+     *   -1 终点旗帜 / -2 集合点 / -3~-999 字符串 id 映射
+     *   -1000~-999999 聚合气泡 / <=-1000000 跨车队消息
+     */
+    _normalizeMarkerId(marker) {
+      if (!marker) return marker;
+      const id = marker.id;
+      // 有效数字直接保留;NaN 虽然 typeof 是 'number' 但不是合法 marker id,需一并映射
+      if (typeof id === 'number' && !isNaN(id)) return marker;
+      const key = (id === undefined || id === null || (typeof id === 'number' && isNaN(id)))
+        ? marker.latitude + ',' + marker.longitude
+        : String(id);
+      let nid = this._stringIdMap.get(key);
+      if (nid === undefined) {
+        nid = this._nextStringId--;
+        this._stringIdMap.set(key, nid);
+        this._revIdMap.set(nid, key);
+      }
+      marker.id = nid;
+      return marker;
+    },
+
     // ==================== Map Error Handling ====================
 
     onMapError(e) {
@@ -1207,7 +1246,8 @@ export default {
       });
 
       // 构造聚合 marker(负数 ID 避免与正数 markerId 冲突)
-      let clusterId = -1;
+      // ID 空间:-1000~-999999 为聚合气泡(-1 终点旗帜/-2 集合点/-3~-999 字符串映射/<=-1000000 跨车队消息)
+      let clusterId = -1000;
       Object.values(grid).forEach((cell) => {
         if (cell.count === 1) {
           // 网格内只有一个且超出当前可显示数量:先隐藏
@@ -1527,7 +1567,7 @@ export default {
       if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) return [];
       const endPointName = ep.name || ep.address || '终点';
       return [{
-        id: 'end_flag_marker',  // 固定字符串 ID,与数字 markerId 不冲突
+        id: -1,  // 固定负数 ID,与正数 markerId 不冲突,微信小程序要求 id 为数字
         latitude: lat,
         longitude: lng,
         iconPath: '/static/default-avatar.png',  // 小程序端 iconPath 必填,用默认图兜底
@@ -1640,10 +1680,10 @@ export default {
       const markerId = e.detail.markerId;
       if (!markerId) return;
 
-      // 优化:点击聚合气泡(负 id)自动放大地图一级,让聚合的标记逐步展开
+      // 优化:点击聚合气泡(-1000~-999999)自动放大地图一级,让聚合的标记逐步展开
       // H5 端 markerId 可能为字符串("-1"),这里统一解析
       const numericId = typeof markerId === 'number' ? markerId : parseInt(markerId, 10);
-      if (!isNaN(numericId) && numericId < 0) {
+      if (!isNaN(numericId) && numericId <= -1000 && numericId > -1000000) {
         const clusterMarker = this.displayMarkers.find(
           (m) => typeof m.id === 'number' && m.id === numericId
         );
@@ -1657,7 +1697,7 @@ export default {
         return;
       }
 
-      const markerData = this.findMarkerData(markerId);
+      const markerData = this.findMarkerData(numericId);
       if (!markerData) return;
 
       this.infoWindow = {
@@ -1678,11 +1718,15 @@ export default {
      * Find marker data by id
      */
     findMarkerData(markerId) {
-      // B4/B5: 字符串 ID 前缀特判(终点旗帜/集合点/跨车队消息气泡)
-      if (typeof markerId === 'string') {
-        if (markerId.startsWith('cross_msg_')) {
+      // B4/B5: 负数 ID 特判(终点旗帜/集合点/跨车队消息气泡),微信小程序要求 marker id 为数字
+      if (typeof markerId === 'number') {
+        if (markerId === -1 || markerId === -2) {
+          // 终点旗帜 / 集合点不弹浮窗(callout 已常驻显示)
+          return null;
+        }
+        if (markerId <= -1000000) {
           // D3: 跨车队私信气泡
-          const senderId = parseInt(markerId.replace('cross_msg_', ''));
+          const senderId = -(markerId + 1000000);
           const msg = this.notifications && this.notifications.crossTeamMessages
             ? this.notifications.crossTeamMessages.find((m) => m.senderId === senderId)
             : null;
@@ -1703,9 +1747,10 @@ export default {
             };
           }
         }
-        // end_flag_marker / meetup_point 不弹浮窗(callout 已常驻显示)
-        if (markerId === 'end_flag_marker' || markerId === 'meetup_point') {
-          return null;
+        // -3~-999 为字符串 id 映射区,还原为原始 id 再走通用查找
+        if (markerId >= -999 && markerId <= -3) {
+          const orig = this._revIdMap.get(markerId);
+          if (orig !== undefined) markerId = orig;
         }
       }
 
@@ -1943,8 +1988,11 @@ export default {
           return lng >= bounds.southwest.lng && lng <= bounds.northeast.lng
               && lat >= bounds.southwest.lat && lat <= bounds.northeast.lat;
         })
-        .map((msg) => ({
-          id: 'cross_msg_' + msg.senderId,  // 固定字符串 ID
+        .map((msg) => {
+          const sid = Number(msg.senderId);
+          return {
+          // 用减法而非加法,避免 senderId 为字符串时被当成拼接产生 NaN
+          id: (isNaN(sid) ? -1000000 : -1000000 - sid),
           latitude: msg.senderLocation.lat,
           longitude: msg.senderLocation.lng,
           iconPath: '/static/default-avatar.png',  // 小程序端 iconPath 必填
@@ -1972,7 +2020,8 @@ export default {
             borderColor: '#C0392B'
           },
           anchor: { x: 0.5, y: 0.5 }
-        }));
+          };
+        });
     },
 
     /**
@@ -2204,7 +2253,7 @@ export default {
       const lng = this.meetupPoint.longitude;
       if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) return [];
       return [{
-        id: 'meetup_point',  // 固定字符串 ID,与数字 markerId 不冲突
+        id: -2,  // 固定负数 ID,与正数 markerId 不冲突,微信小程序要求 id 为数字
         latitude: lat,
         longitude: lng,
         iconPath: '/static/default-avatar.png',  // 小程序端 iconPath 必填,用默认图兜底

@@ -16,7 +16,31 @@ const { forEachClient, send } = require('./src/services/websocket');
 validateProductionEnv();
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+// 使用 noServer 模式:HTTP(3000) 与 HTTPS(3443) 共用同一个 WebSocketServer,
+// 否则小程序连接 wss://localhost:3443/ws 时 HTTPS 服务不处理升级请求会连接失败。
+const wss = new WebSocketServer({ noServer: true });
+
+/**
+ * 统一处理 WebSocket 升级请求(HTTP / HTTPS 共用)
+ */
+function handleUpgrade(request, socket, head) {
+  let pathname = '';
+  try {
+    pathname = new URL(request.url, 'http://localhost').pathname;
+  } catch (_) {
+    socket.destroy();
+    return;
+  }
+  if (pathname !== '/ws') {
+    socket.destroy();
+    return;
+  }
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
+}
+
+server.on('upgrade', handleUpgrade);
 
 /**
  * 实时对讲(PTT)中继:
@@ -91,6 +115,12 @@ wss.on('connection', (ws, req) => {
     ws.close(1008, 'unauthorized');
     return;
   }
+
+  // 必须监听 error，否则单个客户端发送非法帧(如 close 码 1006)会触发
+  // unhandled 'error' event 导致整个 Node 进程崩溃
+  ws.on('error', (err) => {
+    console.warn('[WebSocket] socket error:', err.message);
+  });
 
   ws.on('pong', () => {
     ws.isAlive = true;
@@ -181,6 +211,8 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
     key: fs.readFileSync(keyPath)
   };
   const httpsServer = https.createServer(httpsOptions, app);
+  // HTTPS 也处理 WebSocket 升级,小程序 wss://localhost:3443/ws 才能连上
+  httpsServer.on('upgrade', handleUpgrade);
   httpsServer.listen(HTTPS_PORT, () => {
     console.log(`[HTTPS] https://localhost:${HTTPS_PORT} (自签名证书,用于微信小程序图片加载)`);
   });

@@ -11,11 +11,13 @@
         <view class="header-section">
         <!-- Cover Image -->
           <view class="cover-wrap" @click="onCoverTap">
-            <image
-              :src="resolveAssetUrl(userData.coverImage || userData.cover_image) || '/static/default-cover.png'"
-              class="cover-image"
-              mode="aspectFill"
-            />
+            <view class="cover-image">
+              <local-image
+                style="width:100%;height:100%;"
+                :src="resolveAssetUrl(userData.coverImage || userData.cover_image) || '/static/default-cover.png'"
+                mode="aspectFill"
+              />
+            </view>
             <view v-if="isSelf" class="cover-edit-badge">
               <text class="cover-edit-icon">📷 更换背景</text>
             </view>
@@ -29,11 +31,13 @@
           <!-- Avatar & Info -->
           <view class="avatar-area">
             <view class="avatar-wrap" @click="onAvatarTap">
-              <image
-                :src="resolveAssetUrl(userData.avatar) || '/static/default-avatar.png'"
-                class="avatar"
-                mode="aspectFill"
-              />
+              <view class="avatar">
+                <local-image
+                  style="width:100%;height:100%;"
+                  :src="resolveAssetUrl(userData.avatar) || '/static/default-avatar.png'"
+                  mode="aspectFill"
+                />
+              </view>
               <view v-if="isSelf" class="avatar-edit-badge">
                 <text class="avatar-edit-icon">📷</text>
               </view>

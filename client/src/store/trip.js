@@ -109,9 +109,12 @@ export const useTripStore = defineStore('trip', {
       try {
         // skipAuthRedirect: 静默处理 401,避免与 fetchDrafts 等并行请求同时触发 reLaunch
         // 登录态过期时由 App.vue 的 restoreLoginState 统一兜底跳转
-        const res = await api.trip.getTripList({ status: 2, size: 1 }, { skipAuthRedirect: true });
+        // mine=1: 只返回我是成员的行程,避免把"进行中但已离开/未加入"的公开行程误判为我的行程,
+        // 否则 map 页会据此调用 /locations/team 而收到 400(后端要求我必须是活跃成员 status=2)
+        const res = await api.trip.getTripList({ status: 2, size: 1, mine: 1 }, { skipAuthRedirect: true });
         const list = this.normalizeTripList(res);
-        this.currentTrip = list[0] || null;
+        // 仅保留我仍是活跃成员(myStatus=2)的行程,排除待审批(1)/已离开(3/4)等情况
+        this.currentTrip = list.find((t) => t.myStatus === 2) || null;
         return this.currentTrip;
       } catch (err) {
         throw err;

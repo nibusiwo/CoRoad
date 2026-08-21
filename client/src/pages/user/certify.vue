@@ -57,11 +57,13 @@
 
             <!-- Preview -->
             <view v-else class="preview-area">
-              <image
+                            <view class="license-preview">
+                <local-image style="width:100%;height:100%;"
                 :src="licenseImage"
-                class="license-preview"
+               
                 mode="aspectFit"
-              />
+               />
+              </view>
               <view class="preview-actions">
                 <view class="preview-btn retake" @click="retakeLicense">
                   <text>重新拍摄</text>
@@ -166,13 +168,15 @@
             <!-- License Image -->
             <view class="review-section">
               <text class="review-label">行驶证照片</text>
-              <image
+                            <view class="review-license-thumb">
+                <local-image style="width:100%;height:100%;"
                 v-if="licenseImage"
                 :src="licenseImage"
-                class="review-license-thumb"
+               
                 mode="aspectFill"
-              />
-              <text v-else class="review-missing">未上传</text>
+               />
+                <text v-else class="review-missing">未上传</text>
+              </view>
             </view>
 
             <!-- Face Recognition -->
@@ -899,7 +903,8 @@ export default {
   height: 260rpx;
   border-radius: var(--radius-sm);
   background-color: #E8E8E8;
-}
+    overflow: hidden;
+  }
 
 .review-missing {
   font-size: var(--font-sm);

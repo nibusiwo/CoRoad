@@ -74,11 +74,13 @@
       >
         <view class="card-body">
           <!-- Product Image -->
-          <image
+                    <view class="product-image">
+            <local-image style="width:100%;height:100%;"
             :src="resolveAssetUrl(product.image) || '/static/default-product.png'"
-            class="product-image"
+           
             mode="aspectFill"
-          />
+           />
+          </view>
 
           <!-- Product Info -->
           <view class="product-info">
@@ -534,7 +536,8 @@ export default {
   border-radius: 12rpx;
   flex-shrink: 0;
   background-color: #F5F5F5;
-}
+    overflow: hidden;
+  }
 
 .product-info {
   flex: 1;

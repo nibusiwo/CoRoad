@@ -3,11 +3,13 @@
     <scroll-view class="settings-scroll" scroll-y>
       <!-- ==================== User Info Preview ==================== -->
       <view class="user-preview card" @click="goToProfile">
-        <image
+                <view class="preview-avatar">
+          <local-image style="width:100%;height:100%;"
           :src="userStore.avatar"
-          class="preview-avatar"
+         
           mode="aspectFill"
-        />
+         />
+        </view>
         <view class="preview-info">
           <text class="preview-name">{{ userStore.nickname }}</text>
           <text class="preview-id">ID: {{ userStore.userId }}</text>
@@ -596,6 +598,7 @@ export default {
     background-color: var(--color-divider);
     border: 3rpx solid #F0F0F0;
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   .preview-info {

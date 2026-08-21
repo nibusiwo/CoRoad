@@ -18,16 +18,20 @@
           circular
         >
           <swiper-item v-for="(img, index) in product.images" :key="index">
-            <image :src="img" class="swiper-image" mode="aspectFill" />
+                        <view class="swiper-image">
+              <local-image style="width:100%;height:100%;" :src="img" mode="aspectFill"  />
+            </view>
           </swiper-item>
         </swiper>
         <!-- Single image fallback -->
         <view v-else class="single-image-wrap">
-          <image
+                    <view class="single-image">
+            <local-image style="width:100%;height:100%;"
             :src="product.image || '/static/default-product.png'"
-            class="single-image"
+           
             mode="aspectFill"
-          />
+           />
+          </view>
         </view>
 
         <!-- Product Name & Merchant Info -->
@@ -35,11 +39,13 @@
           <text class="product-name">{{ product.name }}</text>
           <view class="merchant-row">
             <view class="merchant-info" @click="goMerchant">
-              <image
+                            <view class="merchant-logo">
+                <local-image style="width:100%;height:100%;"
                 :src="product.merchantLogo || '/static/default-merchant.png'"
-                class="merchant-logo"
+               
                 mode="aspectFill"
-              />
+               />
+              </view>
               <view class="merchant-detail">
                 <text class="merchant-name">{{ product.merchantName || '商家' }}</text>
                 <view class="merchant-rating">
@@ -119,13 +125,17 @@
 
           <!-- Participant Avatars -->
           <view v-if="participants && participants.length" class="participant-row">
-            <image
+                        <view
+              class="participant-avatar"
               v-for="(p, i) in participants.slice(0, 8)"
               :key="i"
-            :src="resolveAssetUrl(p.avatar) || '/static/default-avatar.png'"
-              class="participant-avatar"
-              mode="aspectFill"
-            />
+            >
+              <local-image
+                style="width:100%;height:100%;"
+                :src="resolveAssetUrl(p.avatar) || '/static/default-avatar.png'"
+                mode="aspectFill"
+              />
+            </view>
             <view v-if="participants.length > 8" class="more-participants">
               <text>+{{ participants.length - 8 }}</text>
             </view>
@@ -159,11 +169,13 @@
         <view class="merchant-card card" @click="goMerchant">
           <text class="section-title">商家信息</text>
           <view class="merchant-card-body">
-            <image
+                        <view class="merchant-card-logo">
+              <local-image style="width:100%;height:100%;"
               :src="product.merchantLogo || '/static/default-merchant.png'"
-              class="merchant-card-logo"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="merchant-card-info">
               <text class="merchant-card-name">{{ product.merchantName || '商家名称' }}</text>
               <view class="merchant-card-rating">
@@ -526,7 +538,8 @@ export default {
   height: 64rpx;
   border-radius: 50%;
   background-color: #F0F0F0;
-}
+    overflow: hidden;
+  }
 
 .merchant-detail {
   .merchant-name {
@@ -893,7 +906,8 @@ export default {
   height: 88rpx;
   border-radius: 50%;
   background-color: #F0F0F0;
-}
+    overflow: hidden;
+  }
 
 .merchant-card-info {
   flex: 1;

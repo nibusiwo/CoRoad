@@ -48,11 +48,13 @@
         <view class="product-card card">
           <text class="section-title">商品信息</text>
           <view class="product-body" @click="goProduct">
-            <image
+                        <view class="product-image">
+              <local-image style="width:100%;height:100%;"
               :src="resolveAssetUrl(order.productImage) || '/static/default-product.png'"
-              class="product-image"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="product-info">
               <text class="product-name">{{ order.productName || '商品名称' }}</text>
               <text class="product-merchant">{{ order.merchantName || '商家名称' }}</text>
@@ -116,11 +118,13 @@
         <view class="merchant-card card">
           <text class="section-title">商家信息</text>
           <view class="merchant-body">
-            <image
+                        <view class="merchant-logo">
+              <local-image style="width:100%;height:100%;"
               :src="resolveAssetUrl(order.merchantLogo) || '/static/default-merchant.png'"
-              class="merchant-logo"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="merchant-info">
               <text class="merchant-name">{{ order.merchantName || '商家名称' }}</text>
               <view class="merchant-actions">
@@ -620,7 +624,8 @@ export default {
   border-radius: 12rpx;
   background-color: #F5F5F5;
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .product-info {
   flex: 1;
@@ -810,7 +815,8 @@ export default {
   border-radius: 50%;
   background-color: #F0F0F0;
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .merchant-info {
   flex: 1;

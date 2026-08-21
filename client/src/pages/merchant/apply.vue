@@ -181,7 +181,9 @@
             <text class="upload-label">营业执照 <text class="required">*</text></text>
             <view class="upload-area" @click="uploadImage('businessLicense')">
               <template v-if="form.businessLicense">
-                <image :src="form.businessLicense" class="upload-preview" mode="aspectFill" />
+                                <view class="upload-preview">
+                  <local-image style="width:100%;height:100%;" :src="form.businessLicense" mode="aspectFill"  />
+                </view>
                 <view class="upload-delete" @click.stop="removeImage('businessLicense')">
                   <text>✕</text>
                 </view>
@@ -198,7 +200,9 @@
             <text class="upload-label">门头照 <text class="required">*</text></text>
             <view class="upload-area" @click="uploadImage('storefront')">
               <template v-if="form.storefront">
-                <image :src="form.storefront" class="upload-preview" mode="aspectFill" />
+                                <view class="upload-preview">
+                  <local-image style="width:100%;height:100%;" :src="form.storefront" mode="aspectFill"  />
+                </view>
                 <view class="upload-delete" @click.stop="removeImage('storefront')">
                   <text>✕</text>
                 </view>
@@ -215,7 +219,9 @@
             <text class="upload-label">店内环境 <text class="required">*</text></text>
             <view class="upload-area multi" @click="uploadImage('interior')">
               <template v-if="form.interior">
-                <image :src="form.interior" class="upload-preview" mode="aspectFill" />
+                                <view class="upload-preview">
+                  <local-image style="width:100%;height:100%;" :src="form.interior" mode="aspectFill"  />
+                </view>
                 <view class="upload-delete" @click.stop="removeImage('interior')">
                   <text>✕</text>
                 </view>
@@ -233,7 +239,9 @@
             <text class="upload-label">身份证正面 <text class="required">*</text></text>
             <view class="upload-area" @click="uploadImage('idCardFront')">
               <template v-if="form.idCardFront">
-                <image :src="form.idCardFront" class="upload-preview" mode="aspectFill" />
+                                <view class="upload-preview">
+                  <local-image style="width:100%;height:100%;" :src="form.idCardFront" mode="aspectFill"  />
+                </view>
                 <view class="upload-delete" @click.stop="removeImage('idCardFront')">
                   <text>✕</text>
                 </view>

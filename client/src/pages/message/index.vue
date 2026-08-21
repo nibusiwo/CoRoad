@@ -64,23 +64,26 @@
               :key="mIndex"
               class="avatar-grid-cell"
             >
-              <image
-                v-if="member.avatar"
-                :src="member.avatar"
-                class="avatar-grid-img"
-                mode="aspectFill"
-              />
-              <view v-else class="avatar-grid-fallback" :style="{ backgroundColor: getAvatarColor(member.nickname) }">
-                <text class="avatar-grid-text">{{ getAvatarInitial(member.nickname) }}</text>
+              <view class="avatar-grid-img">
+                <local-image
+                  v-if="member.avatar"
+                  style="width:100%;height:100%;"
+                  :src="member.avatar"
+                  mode="aspectFill"
+                />
+                <view v-else class="avatar-grid-fallback" :style="{ backgroundColor: getAvatarColor(member.nickname) }">
+                  <text class="avatar-grid-text">{{ getAvatarInitial(member.nickname) }}</text>
+                </view>
               </view>
             </view>
           </view>
-          <image
-            v-else
-            :src="getSessionAvatar(session)"
-            class="session-avatar"
-            mode="aspectFill"
-          />
+          <view v-else class="session-avatar">
+            <local-image
+              style="width:100%;height:100%;"
+              :src="getSessionAvatar(session)"
+              mode="aspectFill"
+            />
+          </view>
           <view class="type-icon">
             <text>{{ getTypeIcon(session.type) }}</text>
           </view>
@@ -152,11 +155,13 @@
         @click="onSessionTap(session)"
       >
         <view class="session-avatar-wrap">
-          <image
+                    <view class="session-avatar">
+            <local-image style="width:100%;height:100%;"
             :src="getSessionAvatar(session)"
-            class="session-avatar"
+           
             mode="aspectFill"
-          />
+           />
+          </view>
           <view class="type-icon type-archived">
             <text>📦</text>
           </view>

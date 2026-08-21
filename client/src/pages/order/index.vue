@@ -56,11 +56,13 @@
 
         <!-- Card Body -->
         <view class="card-body" @click="goDetail(order)">
-          <image
+                    <view class="product-thumb">
+            <local-image style="width:100%;height:100%;"
             :src="order.productImage || '/static/default-product.png'"
-            class="product-thumb"
+           
             mode="aspectFill"
-          />
+           />
+          </view>
           <view class="order-info">
             <text class="merchant-name">{{ order.merchantName || '商家' }}</text>
             <text class="product-name">{{ order.productName || '商品名称' }}</text>
@@ -443,6 +445,7 @@ export default {
     border-radius: 12rpx;
     background-color: #F5F5F5;
     flex-shrink: 0;
+    overflow: hidden;
   }
 
   .order-info {

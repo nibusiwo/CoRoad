@@ -36,11 +36,13 @@
           class="user-card"
         >
           <view class="user-info">
-            <image
+                        <view class="user-avatar">
+              <local-image style="width:100%;height:100%;"
             :src="resolveAssetUrl(user.avatar) || '/static/default-avatar.png'"
-              class="user-avatar"
+             
               mode="aspectFill"
-            />
+             />
+            </view>
             <view class="user-detail">
               <text class="user-nickname">{{ user.nickname || '车友' }}</text>
               <text class="user-date">{{ formatDate(user.blockDate || user.blockedAt || user.createTime) }} 拉黑</text>
@@ -250,7 +252,8 @@ onShow(async () => {
   border-radius: 50%;
   background-color: #F0F0F0;
   flex-shrink: 0;
-}
+    overflow: hidden;
+  }
 
 .user-detail {
   flex: 1;

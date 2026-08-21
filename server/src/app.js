@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 
 // ---------------------------------------------------------------------------
 // Route modules (lazy — will error only when mounted if missing)
@@ -38,7 +39,7 @@ app.use(
   cors({
     origin: process.env.CORS_ORIGIN || true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning'],
     exposedHeaders: ['X-Total-Count'],
     credentials: true,
     maxAge: 86400,
@@ -58,10 +59,11 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// -- Static files (uploaded avatars / images) --------------------------------
-// 微信开发者工具的渲染层运行在 servicewechat.com 域下,请求本地 /uploads 属于跨源,
-// 必须返回 CORP + CORS 响应头,否则图片会被 (blocked:NotSameOrigin) 拦截。
-app.use('/uploads', (req, res, next) => {
+// -- Static files (fonts / uploaded avatars / images) ------------------------
+// 微信开发者工具的渲染层运行在 servicewechat.com 域下,请求本地静态资源属于跨源,
+// 必须返回 CORP + CORS 响应头,否则字体/图片会被 (blocked:NotSameOrigin) 拦截。
+// 参考: /static(小程序图标字体, loadFontFace 加载)、/uploads(头像/相册图片)
+const crossOriginStatic = (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
@@ -71,7 +73,11 @@ app.use('/uploads', (req, res, next) => {
     return res.sendStatus(204);
   }
   next();
-}, express.static('uploads'));
+};
+
+app.use('/static', crossOriginStatic, express.static(path.resolve(__dirname, '../../client/src/static')));
+
+app.use('/uploads', crossOriginStatic, express.static('uploads'));
 
 // ---------------------------------------------------------------------------
 // Rate limiting
