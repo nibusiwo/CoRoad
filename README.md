@@ -100,7 +100,6 @@ CoRoad/
 │   ├── dev-doc-extracted.md      # 需求文档提取
 │   └── dev-doc-source.docx       # 原始需求文档
 │
-├── 同道自驾游技术开发文档.md       # 技术开发文档
 └── README.md
 ```
 
