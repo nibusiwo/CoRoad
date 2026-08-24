@@ -76,7 +76,7 @@
               <text class="bubble-text">{{ msg.content }}</text>
             </view>
             <!-- 图片消息 -->
-            <image
+            <local-image
               v-else-if="msg.type === 'image'"
               :src="msg.content"
               class="msg-image"
@@ -149,7 +149,7 @@
               <text class="bubble-text">{{ msg.content }}</text>
             </view>
             <!-- 图片消息 -->
-            <image
+            <local-image
               v-else-if="msg.type === 'image'"
               :src="msg.content"
               class="msg-image"
@@ -327,7 +327,7 @@
 import { useChatStore } from '@/store/chat.js';
 import { useUserStore } from '@/store/user.js';
 import { useTripStore } from '@/store/trip.js';
-import { upload, chatApi, userApi } from '@/utils/api.js';
+import { upload, chatApi, userApi, resolveAssetUrl } from '@/utils/api.js';
 import { PttClient } from '@/utils/ptt.js';
 
 export default {
@@ -720,7 +720,9 @@ export default {
 
       try {
         const result = await upload('/upload/image', filePath);
-        const url = result.url || result;
+        const rawUrl = (result && result.url) || result || '';
+        const url = resolveAssetUrl(rawUrl);
+        if (!url) throw new Error('上传失败');
         await this.chatStore.sendMessage(this.sessionId, { type: 'image', content: url });
         const index = this.chatStore.currentMessages.findIndex((m) => m.id === tempId);
         if (index !== -1) {
@@ -1089,10 +1091,11 @@ export default {
     previewImage(msg) {
       const urls = this.messages
         .filter((m) => m.type === 'image')
-        .map((m) => m.content);
+        .map((m) => resolveAssetUrl(m.content))
+        .filter(Boolean);
       uni.previewImage({
         urls: urls,
-        current: msg.content
+        current: resolveAssetUrl(msg.content)
       });
     },
 

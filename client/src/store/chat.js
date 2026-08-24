@@ -116,6 +116,40 @@ function normalizeMessage(m) {
   return msg;
 }
 
+/**
+ * 按聊天记录的阅读顺序排序：较早的消息在前，较新的消息在后。
+ *
+ * 聊天详情接口为了分页查询会返回 DESC 顺序（最新消息在前），
+ * 但消息列表的渲染顺序应与微信一致，因此在进入 store 时统一归一化。
+ */
+function sortMessagesChronologically(messages) {
+  return messages
+    .map((message, index) => ({ message, index }))
+    .sort((a, b) => {
+      const timeA = Date.parse(a.message.createTime || "");
+      const timeB = Date.parse(b.message.createTime || "");
+      const validTimeA = Number.isNaN(timeA) ? null : timeA;
+      const validTimeB = Number.isNaN(timeB) ? null : timeB;
+
+      if (validTimeA !== null && validTimeB !== null && validTimeA !== validTimeB) {
+        return validTimeA - validTimeB;
+      }
+      if (validTimeA !== null && validTimeB === null) return -1;
+      if (validTimeA === null && validTimeB !== null) return 1;
+
+      // 同一时间或缺少时间时，使用 id 作为稳定的次序补充。
+      const idA = Number(a.message.id);
+      const idB = Number(b.message.id);
+      if (Number.isFinite(idA) && Number.isFinite(idB) && idA !== idB) {
+        return idA - idB;
+      }
+
+      // 保留接口在完全无法比较时提供的原始顺序。
+      return a.index - b.index;
+    })
+    .map(({ message }) => message);
+}
+
 export const useChatStore = defineStore('chat', {
   state: () => ({
     sessions: [],
@@ -232,7 +266,9 @@ export const useChatStore = defineStore('chat', {
           pagination = data.pagination;
         }
 
-        const messages = list.map(normalizeMessage).filter(Boolean);
+        const messages = sortMessagesChronologically(
+          list.map(normalizeMessage).filter(Boolean)
+        );
 
         if (page === 1) {
           this.currentMessages = messages;
