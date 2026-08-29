@@ -631,7 +631,8 @@ export default {
         }, 1500);
 
       } catch (err) {
-        uni.showToast({ title: '发布失败，请重试', icon: 'none' });
+        const message = err?.message || err?.errMsg || '发布失败，请重试';
+        uni.showToast({ title: message, icon: 'none' });
       } finally {
         this.submitting = false;
       }

@@ -583,7 +583,8 @@ const userApi = {
 const tripApi = {
   /** 创建行程 */
   createTrip(data) {
-    return post('/trips', data);
+    // 由发布页统一展示后端返回的业务错误，避免请求层和页面层重复弹窗
+    return post('/trips', data, { showError: false });
   },
 
   /** 获取行程列表 */
