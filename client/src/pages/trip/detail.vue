@@ -38,6 +38,10 @@
               <text>预计 {{ trip.estimatedDays || '?' }} 天</text>
               <text class="meta-sep">·</text>
               <text>{{ depthLabel(trip.depth) }}</text>
+              <template v-if="trip.routeDistanceKm !== null && trip.routeDistanceKm !== undefined">
+                <text class="meta-sep">·</text>
+                <text class="route-distance-text">全程约 {{ formatRouteDistance(trip.routeDistanceKm) }}</text>
+              </template>
               <!-- E3: 顺路率显示(基于当前用户位置与行程起点/终点) -->
               <template v-if="trip.routeMatch !== null && trip.routeMatch !== undefined">
                 <text class="meta-sep">·</text>
@@ -156,17 +160,22 @@
 
     <!-- 底部操作栏 -->
     <view v-if="!loading && trip" class="action-bar safe-area-bottom">
-      <!-- 非成员 -->
-      <view v-if="!isMember" class="action-full">
-        <view class="action-btn action-apply" :class="{ disabled: trip.hasApplied }" @click="applyJoin">
-          <text>{{ trip.hasApplied ? '等待队长审批...' : '➕ 申请加入' }}</text>
+      <!-- 待审批 -->
+      <view v-if="isPending" class="action-full">
+        <view class="action-btn action-pending">
+          <text>等待队长审批...</text>
         </view>
       </view>
 
-      <!-- 待审批 -->
-      <view v-else-if="isPending" class="action-full">
-        <view class="action-btn action-pending">
-          <text>等待队长审批...</text>
+      <!-- 非成员：只有招募中的行程允许申请 -->
+      <view v-else-if="!isMember && trip.status === 1" class="action-full">
+        <view class="action-btn action-apply" @click="applyJoin">
+          <text>➕ 申请加入</text>
+        </view>
+      </view>
+      <view v-else-if="!isMember" class="action-full">
+        <view class="action-btn action-closed">
+          <text>{{ trip.status === 2 ? '行程已出发，暂不可加入' : '行程已结束，暂不可加入' }}</text>
         </view>
       </view>
 
@@ -301,7 +310,8 @@ export default {
               if (this.trip) this.trip.hasApplied = true;
               uni.showToast({ title: '申请已发送', icon: 'success' });
             } catch (err) {
-              uni.showToast({ title: '申请失败', icon: 'none' });
+              const message = (err && (err.message || (err.data && err.data.message))) || '申请失败';
+              uni.showToast({ title: message, icon: 'none' });
             }
           }
         }
@@ -450,6 +460,15 @@ export default {
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       return month + '/' + day + ' ' + hours + ':' + minutes;
+    },
+
+    /** 格式化路线总里程 */
+    formatRouteDistance(distance) {
+      const value = Number(distance);
+      if (!Number.isFinite(value)) return '--';
+      return value >= 1000
+        ? Math.round(value).toLocaleString() + ' km'
+        : Math.round(value * 10) / 10 + ' km';
     },
 
     /** 深度标签 */
@@ -610,7 +629,8 @@ export default {
     }
 
     /* E3: 顺路率绿色高亮 */
-    .route-match-text {
+    .route-match-text,
+    .route-distance-text {
       color: #07C160;
       font-weight: 600;
     }
@@ -931,6 +951,12 @@ export default {
       color: var(--color-danger);
       border: 1rpx solid var(--color-danger);
     }
+
+    &.action-closed {
+      background-color: var(--color-divider);
+      color: var(--color-text-hint);
+    }
+
   }
 }
 

@@ -103,6 +103,9 @@
             <view class="route-map-thumb">
               <text class="map-placeholder">路线地图预览区域</text>
             </view>
+            <view v-if="estimatedRouteDistanceKm !== null" class="route-distance-summary">
+              <text>预计全程约 {{ formatRouteDistance(estimatedRouteDistanceKm) }}</text>
+            </view>
           </view>
         </view>
       </view>
@@ -363,6 +366,7 @@
 
 <script>
 import { useTripStore } from '@/store/trip.js';
+import { mapApi } from '@/utils/api.js';
 
 export default {
   data() {
@@ -419,6 +423,33 @@ export default {
   computed: {
     tripStore() {
       return useTripStore();
+    },
+
+    estimatedRouteDistanceKm() {
+      const points = [
+        { lng: this.formData.startLng, lat: this.formData.startLat },
+        ...this.formData.waypoints,
+        { lng: this.formData.endLng, lat: this.formData.endLat }
+      ].map((point) => ({
+        lng: Number(point && (point.lng ?? point.longitude)),
+        lat: Number(point && (point.lat ?? point.latitude))
+      })).filter((point) => Number.isFinite(point.lng) && Number.isFinite(point.lat));
+      if (points.length < 2) return null;
+
+      const R = 6371;
+      let total = 0;
+      for (let i = 1; i < points.length; i += 1) {
+        const previous = points[i - 1];
+        const current = points[i];
+        const dLat = (current.lat - previous.lat) * Math.PI / 180;
+        const dLng = (current.lng - previous.lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2
+          + Math.cos(previous.lat * Math.PI / 180)
+          * Math.cos(current.lat * Math.PI / 180)
+          * Math.sin(dLng / 2) ** 2;
+        total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+      return total > 0 ? Math.round(total * 1.3 * 10) / 10 : 0;
     }
   },
 
@@ -445,6 +476,15 @@ export default {
       const day = String(now.getDate()).padStart(2, '0');
       
       this.minDate = `${year}-${month}-${day}`;
+    },
+
+    /** 格式化路线总里程 */
+    formatRouteDistance(distance) {
+      const value = Number(distance);
+      if (!Number.isFinite(value)) return '--';
+      return value >= 1000
+        ? Math.round(value).toLocaleString() + ' km'
+        : Math.round(value * 10) / 10 + ' km';
     },
 
     /** 日期格式化显示 */
@@ -617,6 +657,23 @@ export default {
           },
           waypoints: this.formData.waypoints.filter((wp) => wp.name)
         };
+
+        // 保存路线规划结果，地图页可直接恢复；路线服务不可用时仍允许发布。
+        try {
+          const routeInfo = await mapApi.getRouteInfo(
+            tripData.start_point,
+            tripData.end_point,
+            tripData.waypoints
+          );
+          tripData.route_data = routeInfo || {
+            path: [tripData.start_point, ...tripData.waypoints, tripData.end_point]
+          };
+        } catch (routeErr) {
+          console.warn('保存路线规划结果失败，使用基础路线:', routeErr);
+          tripData.route_data = {
+            path: [tripData.start_point, ...tripData.waypoints, tripData.end_point]
+          };
+        }
 
         const result = await this.tripStore.createTrip(tripData);
 
@@ -978,6 +1035,14 @@ export default {
       font-size: var(--font-xs);
       color: var(--color-text-hint);
     }
+  }
+
+  .route-distance-summary {
+    margin-top: 16rpx;
+    text-align: center;
+    font-size: var(--font-sm);
+    color: var(--color-primary);
+    font-weight: 600;
   }
 }
 

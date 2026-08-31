@@ -668,16 +668,17 @@ const getFollowing = async (req, res, next) => {
 const follow = async (req, res, next) => {
   try {
     const userId = req.userId;
-    const { followee_id, follow_type } = req.body;
+    const followee_id = req.body.followee_id ?? req.body.followeeId;
+    const follow_type = req.body.follow_type ?? req.body.followType;
 
     if (!followee_id) {
       return res.status(422).json(ApiResponse.fail('请提供要关注的用户或车队ID'));
     }
 
-    const type = follow_type || 1; // default: follow a user
+    const type = Number(follow_type) || 1; // default: follow a user
 
     // Cannot follow yourself
-    if (type === 1 && followee_id === userId) {
+    if (type === 1 && String(followee_id) === String(userId)) {
       return res.status(400).json(ApiResponse.fail('不能关注自己'));
     }
 
@@ -686,6 +687,18 @@ const follow = async (req, res, next) => {
       const [targetRows] = await pool.query('SELECT id, status FROM users WHERE id = ?', [followee_id]);
       if (targetRows.length === 0 || targetRows[0].status === 0) {
         return res.status(404).json(ApiResponse.fail('用户不存在或已禁用'));
+      }
+    } else if (type === 2) {
+      const [[trip]] = await pool.query('SELECT id, status FROM trips WHERE id = ?', [followee_id]);
+      if (!trip || trip.status === 0) {
+        return res.status(404).json(ApiResponse.fail('车队不存在或已取消'));
+      }
+      const [[membership]] = await pool.query(
+        'SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ? AND status = 2 LIMIT 1',
+        [followee_id, userId]
+      );
+      if (membership) {
+        return res.status(400).json(ApiResponse.fail('不能关注自己的车队'));
       }
     }
 

@@ -4,8 +4,8 @@
     <view class="status-bar" :style="{ paddingTop: statusBarHeight + 'px' }">
       <view class="status-bar-inner">
         <!-- Left: Team name + day counter -->
-        <view class="status-left" v-if="tripStore.hasActiveTrip">
-          <text class="team-name">{{ tripStore.currentTrip.name || '车队' }}</text>
+        <view class="status-left" v-if="tripStore.hasCurrentTrip">
+          <text class="team-name">{{ tripStore.currentTrip.name || tripStore.currentTrip.title || '车队' }}</text>
           <text class="day-counter">Day{{ dayCounter }}</text>
         </view>
         <view class="status-left" v-else>
@@ -13,7 +13,7 @@
         </view>
 
         <!-- Center: Remaining time -->
-        <view class="status-center" v-if="tripStore.hasActiveTrip">
+        <view class="status-center" v-if="tripStore.hasCurrentTrip">
           <text class="remaining-time">剩余{{ remainingDays }}天</text>
         </view>
         <view class="status-center" v-else>
@@ -135,13 +135,16 @@
     <!-- ==================== Bottom Operation Area ==================== -->
     <view class="bottom-area">
       <!-- Current Trip Card -->
-      <view class="trip-card" v-if="tripStore.hasActiveTrip" @tap="goToTripDetail">
+      <view class="trip-card" v-if="tripStore.hasCurrentTrip" @tap="goToTripDetail">
         <view class="trip-card-row">
           <view class="trip-card-left">
             <text class="trip-level">L{{ tripStore.currentTrip.level || 2 }}</text>
-          <text class="trip-name">{{ tripStore.currentTrip.name }}</text>
-            <text class="trip-distance" v-if="tripStore.currentTrip.distanceToDest">
+          <text class="trip-name">{{ tripStore.currentTrip.name || tripStore.currentTrip.title || '行程' }}</text>
+            <text class="trip-distance" v-if="tripStore.currentTrip.distanceToDest !== null && tripStore.currentTrip.distanceToDest !== undefined">
               距{{ tripStore.currentTrip.destinationName || '终点' }}还有{{ tripStore.currentTrip.distanceToDest }}km
+            </text>
+            <text class="trip-distance" v-else-if="tripStore.currentTrip.routeDistanceKm !== null && tripStore.currentTrip.routeDistanceKm !== undefined">
+              全程约{{ tripStore.currentTrip.routeDistanceKm }}km
             </text>
           </view>
           <view class="trip-card-actions">
@@ -169,15 +172,15 @@
       <!-- Bottom Action Buttons Row -->
       <view class="bottom-actions">
         <view class="action-btn primary" @tap="goToTripCreate">
-          <u-icon name="car" size="36" color="#FFFFFF" />
+          <image class="action-btn-icon" src="/static/action/trip-car.png" mode="aspectFit" />
           <text class="action-btn-text">设行程</text>
         </view>
         <view class="action-btn" @tap="reportMyLocation">
-          <u-icon name="pushpin" size="36" color="#FF6B35" />
+          <image class="action-btn-icon" src="/static/action/report-pin.png" mode="aspectFit" />
           <text class="action-btn-text">报位置</text>
         </view>
         <view class="action-btn sos" @tap="onSosTap" @touchstart="onSosStart" @touchend="onSosEnd" @touchcancel="onSosEnd">
-          <u-icon name="warning" size="36" color="#E74C3C" />
+          <image class="action-btn-icon" src="/static/action/sos-warning.png" mode="aspectFit" />
           <text class="action-btn-text">SOS</text>
         </view>
       </view>
@@ -194,6 +197,7 @@
       @follow="onFollowFromPopup"
       @navigate="onNavigateFromPopup"
       @detail="onDetailFromPopup"
+      @viewmembers="onViewMembersFromPopup"
       @forwardToChat="onForwardTrafficToChat"
       @setMeetup="onSetLeaderMeetup"
     />
@@ -401,7 +405,7 @@ export default {
       });
 
       // B1: 终点旗帜 marker - 常驻显示,不走 layers 开关,放在聚合之后不参与聚合
-      if (this.tripStore.hasActiveTrip) {
+      if (this.tripStore.hasCurrentTrip) {
         for (const m of this.buildEndFlagMarker()) {
           out.push(this.stableMarker('end_flag:' + m.id, m));
         }
@@ -445,6 +449,19 @@ export default {
           }
         });
       }
+      // 当前行程的起终点也纳入视野，避免广州出发、北京终点时终点在屏幕外。
+      // 只加入端点而不加入整条 path，避免大量路线采样点触发频繁重绘。
+      if (this.tripStore.hasCurrentTrip) {
+        const trip = this.tripStore.currentTrip;
+        [trip.startPointData, trip.endPointData].forEach((point) => {
+          const latitude = Number(point && (point.lat ?? point.latitude));
+          const longitude = Number(point && (point.lng ?? point.longitude));
+          if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+            points.push({ latitude, longitude });
+          }
+        });
+      }
+
       // 地图本身已以当前定位为中心(latitude/longitude),不需要把当前点重复塞进 includePoints
       // 同一组坐标返回同一数组引用,避免每次定位上报都触发地图重新 fit(跳动/卡顿)
       const key = JSON.stringify(points);
@@ -474,6 +491,8 @@ export default {
     this._stringIdMap = new Map();
     this._revIdMap = new Map();
     this._nextStringId = -3;
+    // 微信小程序点击 marker 时可能同时触发 map tap；短暂屏蔽后者，避免浮窗一闪即逝
+    this._suppressMapTapUntil = 0;
   },
 
   /**
@@ -495,14 +514,17 @@ export default {
    * Lifecycle: Page Show
    */
   onShow() {
-    // Refresh trip status when page shows
-    if (this.userStore.isLoggedIn) {
+    // Refresh trip status when page shows. During app startup the token may
+    // exist before the async profile restore flips isLoggedIn to true.
+    const hasStoredToken = !!uni.getStorageSync('token');
+    if (this.userStore.isLoggedIn || hasStoredToken) {
       this.tripStore.fetchCurrentTrip()
-        .then(() => {
+        .then(async () => {
           // 行程可能在创建/编辑后变化,重新计算 Day 与剩余天数
-          if (this.tripStore.hasActiveTrip) {
+          if (this.tripStore.hasCurrentTrip) {
             this.calcTripCounters();
           }
+          await this.fetchTripRoutePolyline();
         })
         .catch(() => {});
       this.chatStore.fetchUnread().catch(() => {});
@@ -612,7 +634,8 @@ export default {
         };
 
         // 先取行程(终点旗帜/集合点/路线都依赖它,定位失败时也要用它回退起点)
-        if (this.userStore.isLoggedIn) {
+        const hasStoredToken = !!uni.getStorageSync('token');
+        if (this.userStore.isLoggedIn || hasStoredToken) {
           await this.tripStore.fetchCurrentTrip();
           // 定位失败时,若存在行程则回退到行程起点,避免地图定位到错误城市
           if (this._locationFallback && this.tripStore.currentTrip) {
@@ -978,10 +1001,11 @@ export default {
      * A6: 获取行程路线 polyline
      */
     async fetchTripRoutePolyline() {
-      if (!this.tripStore.hasActiveTrip) {
+      if (!this.tripStore.hasCurrentTrip) {
         this.routePolyline = [];
         return;
       }
+
       const trip = this.tripStore.currentTrip;
       const startPoint = trip.startPointData;
       const endPoint = trip.endPointData;
@@ -989,54 +1013,65 @@ export default {
         this.routePolyline = [];
         return;
       }
-      const originLng = startPoint.lng || startPoint.longitude;
-      const originLat = startPoint.lat || startPoint.latitude;
-      const destLng = endPoint.lng || endPoint.longitude;
-      const destLat = endPoint.lat || endPoint.latitude;
-      if (!originLng || !originLat || !destLng || !destLat) {
+
+      const originLng = startPoint.lng ?? startPoint.longitude;
+      const originLat = startPoint.lat ?? startPoint.latitude;
+      const destLng = endPoint.lng ?? endPoint.longitude;
+      const destLat = endPoint.lat ?? endPoint.latitude;
+      if (originLng == null || originLat == null || destLng == null || destLat == null) {
         this.routePolyline = [];
         return;
       }
+
       try {
-        const routeInfo = await mapApi.getRouteInfo(
-          { lng: originLng, lat: originLat },
-          { lng: destLng, lat: destLat }
-        );
-        if (routeInfo && routeInfo.segments && routeInfo.segments.length > 0) {
-          // 从 segments 的 polyline 字段构建路线点
-          const points = [];
-          for (const seg of routeInfo.segments) {
-            if (seg.polyline && typeof seg.polyline === 'string') {
-              // 高德 polyline 格式: "lng,lat;lng,lat;..."
-              const coordPairs = seg.polyline.split(';');
-              for (const pair of coordPairs) {
-                const [lngStr, latStr] = pair.split(',');
-                const lng = parseFloat(lngStr);
-                const lat = parseFloat(latStr);
-                if (!isNaN(lng) && !isNaN(lat)) {
-                  points.push({ latitude: lat, longitude: lng });
+        let routeInfo = trip.routeData || trip.route_data;
+        if (!routeInfo) {
+          routeInfo = await mapApi.getRouteInfo(
+            { lng: originLng, lat: originLat },
+            { lng: destLng, lat: destLat },
+            trip.waypoints || []
+          );
+        }
+
+        // 高德真实道路轨迹位于 segments[*].polyline；path 仅是起点/途经点/终点
+        // 的简化路径。必须优先使用 polyline，否则长途路线会被画成直线。
+        let roadPath = [];
+        if (routeInfo && Array.isArray(routeInfo.segments)) {
+          for (const segment of routeInfo.segments) {
+            if (!segment.polyline || typeof segment.polyline !== 'string') continue;
+            for (const pair of segment.polyline.split(';')) {
+              const [lng, lat] = pair.split(',').map(Number);
+              if (Number.isFinite(lng) && Number.isFinite(lat)) {
+                const previous = roadPath[roadPath.length - 1];
+                if (!previous || previous.lng !== lng || previous.lat !== lat) {
+                  roadPath.push({ lng, lat });
                 }
               }
             }
           }
-          if (points.length > 1) {
-            // 有真实路线数据:绘制实际道路折线
-            this.routePolyline = [{
-              points,
-              color: '#07C160',
-              width: 6,
-              dottedLine: false,
-              arrowLine: true,
-              borderColor: '#06AD55',
-              borderWidth: 1
-            }];
-          } else {
-            // 只有示意数据(无真实 polyline):不画误导性的直线
-            this.routePolyline = [];
-            this.notifyRouteUnavailable(routeInfo);
-          }
+        }
+        const rawPath = roadPath.length > 1
+          ? roadPath
+          : (routeInfo && Array.isArray(routeInfo.path) ? routeInfo.path : []);
+
+        const points = rawPath
+          .map((point) => ({
+            latitude: Number(point.lat ?? point.latitude),
+            longitude: Number(point.lng ?? point.longitude)
+          }))
+          .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+
+        if (points.length > 1) {
+          this.routePolyline = [{
+            points,
+            color: '#07C160',
+            width: 6,
+            dottedLine: !!(routeInfo && routeInfo.api_integration && routeInfo.api_integration.status === 'not_configured'),
+            arrowLine: true,
+            borderColor: '#06AD55',
+            borderWidth: 1
+          }];
         } else {
-          // 无路线规划结果:不画直线,提示用户
           this.routePolyline = [];
           this.notifyRouteUnavailable(routeInfo);
         }
@@ -1045,7 +1080,6 @@ export default {
         this.routePolyline = [];
       }
     },
-
     /**
      * 路线规划不可用提示(每个会话只提示一次,避免 30s 轮询重复弹)
      */
@@ -1677,6 +1711,8 @@ export default {
      * Handle marker tap - show info window
      */
     onMarkerTap(e) {
+      // marker tap 与 map tap 可能连续派发，防止 map tap 紧接着关闭刚打开的浮窗
+      this._suppressMapTapUntil = Date.now() + 500;
       const markerId = e.detail.markerId;
       if (!markerId) return;
 
@@ -1894,6 +1930,7 @@ export default {
      * Map tap - close info window
      */
     onMapTap() {
+      if (Date.now() < this._suppressMapTapUntil) return;
       if (this.infoWindow.visible) {
         this.closeInfoWindow();
       }
@@ -2105,8 +2142,16 @@ export default {
         uni.showToast({ title: '无法获取关注对象', icon: 'none' });
         return;
       }
-      // 其他车队 -> follow_type=2(关注车队);个人/陌生人 -> follow_type=1(关注用户)
+      // 其他车队 -> follow_type=2；个人/陌生人 -> follow_type=1
       const followType = this.infoWindow.type === 'other_team' ? 2 : 1;
+      if (followType === 2) {
+        const currentTrip = this.tripStore.currentTrip || {};
+        const currentTripId = currentTrip.id || currentTrip.tripId || currentTrip.trip_id;
+        if (currentTripId && String(currentTripId) === String(user.id)) {
+          uni.showToast({ title: '不能关注自己的车队', icon: 'none' });
+          return;
+        }
+      }
       try {
         uni.showLoading({ title: '关注中...' });
         await userApi.follow(user.id, followType);
@@ -2118,7 +2163,6 @@ export default {
         uni.showToast({ title: (err && err.message) || '关注失败', icon: 'none' });
       }
     },
-
     onNavigateFromPopup(data) {
       if (!data || !data.latitude || !data.longitude) {
         uni.showToast({ title: '无法获取目标位置', icon: 'none' });
@@ -2133,7 +2177,52 @@ export default {
       });
     },
 
-    onDetailFromPopup(data) {
+    onViewMembersFromPopup(data) {
+      return this.loadTeamMembersFromPopup(data);
+    },
+
+    async loadTeamMembersFromPopup(data) {
+      if (this.infoWindow.type === 'other_team') {
+        const teamId = data && (data.teamId || data.id);
+        if (!teamId) {
+          uni.showToast({ title: '无法获取车队信息', icon: 'none' });
+          return;
+        }
+        if (data.membersExpanded) {
+          this.infoWindow = {
+            ...this.infoWindow,
+            data: { ...data, membersExpanded: false }
+          };
+          return;
+        }
+        this.infoWindow = {
+          ...this.infoWindow,
+          data: { ...data, membersExpanded: true, membersLoading: true, members: [] }
+        };
+        try {
+          const rows = await api.trip.getTripMembers(teamId);
+          const members = (Array.isArray(rows) ? rows : []).map((member) => ({
+            userId: member.user_id || member.userId || member.id,
+            nickname: member.nickname || '未知用户',
+            avatar: member.avatar || '',
+            level: member.level || 1,
+            isOwner: member.role === 1 || member.role === '1' || member.role === 'captain',
+            isCertified: member.is_certified === 2 || member.isCertified === true,
+            signature: member.signature || ''
+          }));
+          this.infoWindow = {
+            ...this.infoWindow,
+            data: { ...this.infoWindow.data, members, membersLoading: false }
+          };
+        } catch (err) {
+          this.infoWindow = {
+            ...this.infoWindow,
+            data: { ...this.infoWindow.data, members: [], membersLoading: false, membersExpanded: true, membersError: true }
+          };
+          uni.showToast({ title: (err && err.message) || '成员加载失败', icon: 'none' });
+        }
+        return;
+      }
       if (data.merchantId) {
         uni.navigateTo({ url: '/pages/merchant/detail?id=' + data.merchantId });
       } else if (data.poiId) {
@@ -2141,7 +2230,6 @@ export default {
         uni.showToast({ title: '查看详情', icon: 'none' });
       }
     },
-
     /**
      * B4: 转发路况事件到车队群聊
      * 1. 拉取车队群聊会话列表
@@ -3002,8 +3090,10 @@ export default {
 }
 
 .action-btn-icon {
-  font-size: 36rpx;
+  width: 44rpx;
+  height: 44rpx;
   margin-bottom: 4rpx;
+  flex-shrink: 0;
 }
 
 .action-btn-text {

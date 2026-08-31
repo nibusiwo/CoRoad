@@ -65,6 +65,78 @@ function normalizeStringArray(value) {
   return [];
 }
 
+function normalizeRouteData(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
+function getCoordinate(point, key) {
+  if (!point || typeof point !== 'object') return null;
+  const value = key === 'lng'
+    ? pickDefined(point.lng, point.longitude)
+    : pickDefined(point.lat, point.latitude);
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+/**
+ * 统一提取路线总里程。
+ *
+ * 路线服务可能返回 summary.road_distance_km，也可能只返回起终点 path
+ * （例如未配置高德 Key 或路线服务降级时）。后者使用 Haversine
+ * 累加并加道路曲折系数，保证长途行程仍有可展示的距离。
+ */
+function getRouteDistanceKm(routeData, startPoint, endPoint, waypoints) {
+  const summary = routeData && typeof routeData.summary === 'object'
+    ? routeData.summary
+    : {};
+  const summaryDistance = pickDefined(
+    summary.road_distance_km,
+    summary.roadDistanceKm,
+    routeData && routeData.road_distance_km,
+    routeData && routeData.roadDistanceKm
+  );
+  const parsedSummaryDistance = Number(summaryDistance);
+  if (Number.isFinite(parsedSummaryDistance) && parsedSummaryDistance >= 0) {
+    return Math.round(parsedSummaryDistance * 10) / 10;
+  }
+
+  const path = routeData && Array.isArray(routeData.path) && routeData.path.length > 1
+    ? routeData.path
+    : [startPoint, ...(Array.isArray(waypoints) ? waypoints : []), endPoint];
+  const points = path
+    .map((point) => ({
+      lng: getCoordinate(point, 'lng'),
+      lat: getCoordinate(point, 'lat')
+    }))
+    .filter((point) => point.lng !== null && point.lat !== null);
+  if (points.length < 2) return null;
+
+  const R = 6371;
+  let total = 0;
+  for (let i = 1; i < points.length; i += 1) {
+    const previous = points[i - 1];
+    const current = points[i];
+    const dLat = (current.lat - previous.lat) * Math.PI / 180;
+    const dLng = (current.lng - previous.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(previous.lat * Math.PI / 180)
+      * Math.cos(current.lat * Math.PI / 180)
+      * Math.sin(dLng / 2) ** 2;
+    total += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  return total > 0 ? Math.round(total * 1.3 * 10) / 10 : 0;
+}
+
 export const useTripStore = defineStore('trip', {
   state: () => ({
     currentTrip: null,
@@ -82,6 +154,11 @@ export const useTripStore = defineStore('trip', {
       return !!(state.currentTrip && state.currentTrip.status === 2);
     },
 
+
+    /** 当前是否已设置行程（招募中或已出发） */
+    hasCurrentTrip(state) {
+      return !!(state.currentTrip && (state.currentTrip.status === 1 || state.currentTrip.status === 2));
+    },
     /** 当前行程是否为队长 */
     isCaptain(state) {
       if (!state.currentTrip) return false;
@@ -111,10 +188,14 @@ export const useTripStore = defineStore('trip', {
         // 登录态过期时由 App.vue 的 restoreLoginState 统一兜底跳转
         // mine=1: 只返回我是成员的行程,避免把"进行中但已离开/未加入"的公开行程误判为我的行程,
         // 否则 map 页会据此调用 /locations/team 而收到 400(后端要求我必须是活跃成员 status=2)
-        const res = await api.trip.getTripList({ status: 2, size: 1, mine: 1 }, { skipAuthRedirect: true });
+        const res = await api.trip.getTripList({ size: 50, mine: 1 }, { skipAuthRedirect: true });
         const list = this.normalizeTripList(res);
         // 仅保留我仍是活跃成员(myStatus=2)的行程,排除待审批(1)/已离开(3/4)等情况
-        this.currentTrip = list.find((t) => t.myStatus === 2) || null;
+        this.currentTrip = list.find((t) => {
+          const myStatus = Number(t.myStatus);
+          const status = Number(t.status);
+          return myStatus === 2 && (status === 1 || status === 2);
+        }) || null;
         return this.currentTrip;
       } catch (err) {
         throw err;
@@ -199,6 +280,10 @@ export const useTripStore = defineStore('trip', {
       if (!trip) return null;
       const startPointRaw = pickDefined(trip.start_point, trip.startPointData, trip.startPoint);
       const endPointRaw = pickDefined(trip.end_point, trip.endPointData, trip.endPoint);
+      const waypoints = Array.isArray(trip.waypoints)
+        ? trip.waypoints
+        : normalizeRouteData(trip.waypoints) || [];
+      const routeData = normalizeRouteData(pickDefined(trip.route_data, trip.routeData));
       const leaderInfo = trip.leader_info || trip.leaderInfo || {};
       const leaderId = pickDefined(trip.leader_id, trip.leaderId, leaderInfo.id, trip.captainId);
       const leaderNickname = pickDefined(trip.leader_nickname, trip.leaderNickname, leaderInfo.nickname, trip.captainNickname);
@@ -208,7 +293,12 @@ const leaderAvatar = resolveAssetUrl(pickDefined(trip.leader_avatar, trip.leader
       const leaderRating = pickDefined(trip.leader_rating, trip.leaderRating, leaderInfo.rating, trip.captainRating);
       const currentCars = pickDefined(trip.current_cars, trip.currentCars, trip.joinedCars);
       const currentMembers = pickDefined(trip.current_members, trip.currentMembers, trip.memberCount);
-      const myStatus = pickDefined(trip.my_status, trip.myStatus);
+      const rawStatus = pickDefined(trip.status);
+      const normalizedStatus = Number(rawStatus);
+      const status = Number.isFinite(normalizedStatus) ? normalizedStatus : rawStatus;
+      const rawMyStatus = pickDefined(trip.my_status, trip.myStatus);
+      const normalizedMyStatus = Number(rawMyStatus);
+      const myStatus = Number.isFinite(normalizedMyStatus) ? normalizedMyStatus : rawMyStatus;
       const hasApplied = pickDefined(trip.has_applied, trip.hasApplied, myStatus === 1);
       const isMember = pickDefined(trip.is_member, trip.isMember, myStatus === 2);
       const isCaptain = pickDefined(trip.is_captain, trip.isCaptain);
@@ -225,6 +315,8 @@ const leaderAvatar = resolveAssetUrl(pickDefined(trip.leader_avatar, trip.leader
         endLng: pickDefined(trip.end_lng, trip.endLng, getPointCoord(endPointRaw, 'lng')),
         endLat: pickDefined(trip.end_lat, trip.endLat, getPointCoord(endPointRaw, 'lat')),
         departureTime: trip.departure_time || trip.departureTime,
+        status,
+        myStatus,
         estimatedDays: trip.estimated_days !== undefined ? trip.estimated_days : trip.estimatedDays,
         dailyDistance: trip.daily_distance !== undefined ? trip.daily_distance : trip.dailyDistance,
         maxCars: trip.max_cars !== undefined ? trip.max_cars : trip.maxCars,
@@ -233,6 +325,8 @@ const leaderAvatar = resolveAssetUrl(pickDefined(trip.leader_avatar, trip.leader
         maxMembers: trip.max_members !== undefined ? trip.max_members : trip.maxMembers,
         currentMembers,
         memberCount: pickDefined(trip.memberCount, currentMembers),
+        routeData,
+        routeDistanceKm: getRouteDistanceKm(routeData, startPointRaw, endPointRaw, waypoints),
         isPublic: trip.is_public !== undefined ? trip.is_public : trip.isPublic,
         leaderInfo: {
           ...leaderInfo,

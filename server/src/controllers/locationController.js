@@ -139,7 +139,8 @@ const reportLocation = async (req, res, next) => {
       `SELECT tm.id AS member_id, tm.trip_id, t.route_data, t.leader_id
        FROM trip_members tm
        JOIN trips t ON t.id = tm.trip_id
-       WHERE tm.user_id = ? AND tm.status = 2 AND t.status = 2`,
+       WHERE tm.user_id = ? AND tm.status = 2 AND t.status = 2
+         AND tm.role <> 1`,
       [userId]
     );
 

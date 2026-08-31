@@ -554,7 +554,7 @@ const userApi = {
 
   /** 关注用户 */
   follow(followeeId, followType) {
-    return post('/users/follow', { followeeId, followType: followType || 1 });
+    return post('/users/follow', { followee_id: followeeId, follow_type: followType || 1 });
   },
 
   /** 取消关注 */
@@ -962,12 +962,13 @@ const mapApi = {
   },
 
   /** 获取路线信息 */
-  getRouteInfo(origin, destination) {
+  getRouteInfo(origin, destination, waypoints) {
     return get('/map/route-info', {
       origin_lng: origin.lng,
       origin_lat: origin.lat,
       dest_lng: destination.lng,
-      dest_lat: destination.lat
+      dest_lat: destination.lat,
+      ...(Array.isArray(waypoints) && waypoints.length ? { waypoints: JSON.stringify(waypoints) } : {})
     });
   }
 };

@@ -122,13 +122,19 @@ const createTrip = async (req, res, next) => {
 // =============================================================================
 const getTripList = async (req, res, next) => {
   try {
+    const pageSizeInput = req.query.pageSize ?? req.query.size;
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize) || 20));
+    const pageSize = Math.min(50, Math.max(1, parseInt(pageSizeInput) || 20));
     const offset = (page - 1) * pageSize;
 
     const {
       status, keyword, sort, point_lng, point_lat, mine
     } = req.query;
+    const currentUserId = req.userId || null;
+    // mine=1: 只看我发起的或我加入的行程。队长创建行程时会同步写入
+    // trip_members(status=2)，因此可以统一走成员索引 JOIN，避免原来的
+    // leader_id OR EXISTS 全表扫描再对 JSON 大字段做 filesort。
+    const mineOnly = mine === '1' && currentUserId !== null;
 
     // Build WHERE conditions
     const conditions = ['t.status != 0'];
@@ -144,55 +150,70 @@ const getTripList = async (req, res, next) => {
 
     if (keyword && keyword.trim()) {
       conditions.push('t.title LIKE ?');
-      params.push(`%${keyword.trim()}%`);
-    }
-    // mine=1: 只看我发起的或我加入的行程
-    if (mine === '1' && req.userId) {
-      conditions.push(
-        '(t.leader_id = ? OR EXISTS (SELECT 1 FROM trip_members tm WHERE tm.trip_id = t.id AND tm.user_id = ? AND tm.status IN (1, 2)))'
-      );
-      params.push(req.userId, req.userId);
+      params.push('%' + keyword.trim() + '%');
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
 
     // Build ORDER BY
-    let orderClause = 'ORDER BY t.created_at DESC';
+    let orderClause = 'ORDER BY t.created_at DESC, t.id DESC';
     if (sort === 'departure_time') {
-      orderClause = 'ORDER BY t.departure_time ASC';
+      orderClause = 'ORDER BY t.departure_time ASC, t.id ASC';
     } else if (sort === 'departure_time_desc') {
-      orderClause = 'ORDER BY t.departure_time DESC';
+      orderClause = 'ORDER BY t.departure_time DESC, t.id DESC';
     }
+
+    const countJoin = mineOnly
+      ? 'JOIN trip_members tm_mine ON tm_mine.trip_id = t.id AND tm_mine.user_id = ? AND tm_mine.status IN (1, 2)'
+      : '';
+    const countParams = mineOnly ? [currentUserId, ...params] : params;
 
     // Count total
     const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM trips t ${whereClause}`,
-      params
+      'SELECT COUNT(*) AS total FROM trips t ' + countJoin + ' ' + whereClause,
+      countParams
     );
 
-    const currentUserId = req.userId || null;
     const membershipSelect = currentUserId
       ? ', tm_self.role AS my_role, tm_self.status AS my_status'
       : ', NULL AS my_role, NULL AS my_status';
     const membershipJoin = currentUserId
-      ? 'LEFT JOIN trip_members tm_self ON tm_self.trip_id = t.id AND tm_self.user_id = ?'
+      ? (mineOnly
+        ? 'JOIN trip_members tm_self ON tm_self.trip_id = t.id AND tm_self.user_id = ? AND tm_self.status IN (1, 2)'
+        : 'LEFT JOIN trip_members tm_self ON tm_self.trip_id = t.id AND tm_self.user_id = ?')
       : '';
 
-    // Fetch list with leader info
-    const [rows] = await pool.query(
-      `SELECT t.*,
-              u.nickname AS leader_nickname,
-              u.avatar AS leader_avatar,
-              ROUND(u.credit_score / 20, 1) AS leader_rating
-              ${membershipSelect}
-       FROM trips t
-       JOIN users u ON u.id = t.leader_id
-       ${membershipJoin}
-       ${whereClause}
-       ${orderClause}
-       LIMIT ? OFFSET ?`,
-      currentUserId ? [currentUserId, ...params, pageSize, offset] : [...params, pageSize, offset]
+    // Fetch IDs first, so MySQL sorts only a narrow indexed row instead of
+    // the JSON-heavy t.* payload. This avoids ER_OUT_OF_SORTMEMORY on large
+    // trip tables for both public and mine=1 requests.
+    const idJoin = mineOnly
+      ? 'JOIN trip_members tm_self ON tm_self.trip_id = t.id AND tm_self.user_id = ? AND tm_self.status IN (1, 2)'
+      : '';
+    const idParams = mineOnly ? [currentUserId, ...params, pageSize, offset] : [...params, pageSize, offset];
+    const [idRows] = await pool.query(
+      'SELECT t.id FROM trips t ' + idJoin + ' ' + whereClause + ' ' + orderClause + ' LIMIT ? OFFSET ?',
+      idParams
     );
+    const tripIds = idRows.map((row) => row.id);
+
+    let rows = [];
+    if (tripIds.length > 0) {
+      const placeholders = tripIds.map(() => '?').join(',');
+      const [detailRows] = await pool.query(
+        'SELECT t.*, ' +
+                'u.nickname AS leader_nickname, ' +
+                'u.avatar AS leader_avatar, ' +
+                'ROUND(u.credit_score / 20, 1) AS leader_rating' +
+                membershipSelect +
+         ' FROM trips t ' +
+         'JOIN users u ON u.id = t.leader_id ' +
+         membershipJoin +
+         ' WHERE t.id IN (' + placeholders + ')',
+        currentUserId ? [currentUserId, ...tripIds] : tripIds
+      );
+      const rowsById = new Map(detailRows.map((row) => [String(row.id), row]));
+      rows = tripIds.map((id) => rowsById.get(String(id))).filter(Boolean);
+    }
 
     // Process rows: parse JSON fields, compute route_match if point provided
     const list = rows.map(row => {
@@ -206,6 +227,7 @@ const getTripList = async (req, res, next) => {
         start_point: typeof row.start_point === 'string' ? JSON.parse(row.start_point) : row.start_point,
         end_point: typeof row.end_point === 'string' ? JSON.parse(row.end_point) : row.end_point,
         waypoints: row.waypoints ? (typeof row.waypoints === 'string' ? JSON.parse(row.waypoints) : row.waypoints) : null,
+        route_data: row.route_data ? (typeof row.route_data === 'string' ? JSON.parse(row.route_data) : row.route_data) : null,
         departure_time: row.departure_time,
         estimated_days: row.estimated_days,
         daily_distance: row.daily_distance,
@@ -1206,7 +1228,7 @@ const getTripMembers = async (req, res, next) => {
     const [members] = await pool.query(
       `SELECT tm.id AS member_id, tm.user_id, tm.role, tm.joined_at,
               u.nickname, u.avatar, u.vehicle_model, u.plate_number,
-              u.level, u.is_certified, u.last_position
+              u.level, u.is_certified, u.signature, u.last_position
        FROM trip_members tm
        JOIN users u ON u.id = tm.user_id
        WHERE tm.trip_id = ? AND tm.status = 2
@@ -1248,6 +1270,7 @@ const getTripMembers = async (req, res, next) => {
         plate_number: m.plate_number ? m.plate_number.slice(0, 2) + '****' : null,
         level: m.level,
         is_certified: m.is_certified,
+        signature: m.signature || '',
         role: m.role,
         joined_at: m.joined_at,
         last_position: lastPosition

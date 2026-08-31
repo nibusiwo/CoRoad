@@ -82,12 +82,31 @@
           <text class="team-info-value">{{ user.routeName }}</text>
         </view>
       </view>
+      <view class="team-members-panel" v-if="type === 'other_team' && user.membersExpanded">
+        <view class="team-members-title">
+          <text>车队成员</text>
+          <text class="team-members-count">{{ user.members ? user.members.length : 0 }}人</text>
+        </view>
+        <view v-if="user.membersLoading" class="team-members-state">加载成员中...</view>
+        <view v-else-if="user.membersError" class="team-members-state">成员加载失败，请稍后重试</view>
+        <view v-else-if="user.members && user.members.length" class="team-member-list">
+          <view v-for="member in user.members" :key="member.userId || member.user_id" class="team-member-item" @tap="onMemberTap(member)">
+            <view class="team-member-main">
+              <text class="team-member-name">{{ member.nickname || '未知用户' }}</text>
+              <text class="team-member-level">Lv.{{ member.level || 1 }}</text>
+              <text v-if="member.isOwner" class="team-member-owner">车主</text>
+            </view>
+            <text class="team-member-signature">{{ member.signature || '暂无签名' }}</text>
+          </view>
+        </view>
+        <view v-else class="team-members-state">暂无可展示成员</view>
+      </view>
       <view class="popup-actions" v-if="type === 'other_team'">
         <view class="popup-btn follow-btn" @tap="onFollow">
           <text>⭐ 关注车队</text>
         </view>
-        <view class="popup-btn detail-btn" @tap="onDetail">
-          <text>👥 查看成员</text>
+        <view class="popup-btn detail-btn" @click="onViewMembers">
+          <text>{{ user.membersExpanded ? '收起成员' : '👥 查看成员' }}</text>
         </view>
       </view>
 
@@ -323,6 +342,23 @@ export default {
     /**
      * Navigate button click
      */
+    onMemberTap(member) {
+      const id = member && (member.userId || member.user_id || member.id);
+      if (!id) return;
+      this.$emit('homepage', {
+        id,
+        nickname: member.nickname || '未知用户',
+        avatar: member.avatar || '',
+        level: member.level || 1,
+        isCertified: member.isCertified || member.is_certified === 2,
+        signature: member.signature || ''
+      });
+    },
+
+    onViewMembers() {
+      this.$emit('viewmembers', this.user);
+    },
+
     onNavigate() {
       this.$emit('navigate', this.user);
     },
@@ -688,6 +724,25 @@ export default {
   color: #1A1A1A;
   font-weight: 500;
 }
+
+// ==================== Team Members ====================
+.team-members-panel {
+  margin: 0 0 20rpx;
+  padding: 18rpx 20rpx;
+  background: #FAFCFF;
+  border: 1rpx solid #E7EFF8;
+  border-radius: 16rpx;
+}
+
+.team-members-title { display: flex; justify-content: space-between; margin-bottom: 12rpx; font-size: 26rpx; font-weight: 600; color: #1A1A1A; }
+.team-members-count { color: #999; font-weight: 400; }
+.team-members-state { padding: 18rpx 0; text-align: center; color: #999; font-size: 24rpx; }
+.team-member-item { padding: 14rpx 0; border-top: 1rpx solid #EEF2F6; }
+.team-member-main { display: flex; align-items: center; gap: 10rpx; }
+.team-member-name { max-width: 280rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; color: #1A1A1A; font-weight: 600; }
+.team-member-level { font-size: 20rpx; color: #4A90D9; }
+.team-member-owner { padding: 2rpx 8rpx; border-radius: 8rpx; background: #FFF4D6; color: #B77900; font-size: 18rpx; }
+.team-member-signature { display: block; margin-top: 6rpx; font-size: 22rpx; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 // ==================== Merchant Info ====================
 .popup-merchant-info {

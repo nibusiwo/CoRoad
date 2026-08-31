@@ -91,7 +91,8 @@ async function checkDetachedMembersOnce() {
     `SELECT tm.id, tm.trip_id, tm.user_id, tm.joined_at
      FROM trip_members tm
      JOIN trips t ON t.id = tm.trip_id AND t.status = 2
-     WHERE tm.status = 2`
+     WHERE tm.status = 2
+       AND tm.role <> 1`
   );
 
   let detachedCount = 0;

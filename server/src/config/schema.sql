@@ -87,7 +87,8 @@ CREATE TABLE `trips` (
   PRIMARY KEY (`id`),
   KEY `idx_leader` (`leader_id`),
   KEY `idx_departure` (`departure_time`),
-  KEY `idx_status` (`status`)
+  KEY `idx_status` (`status`),
+  KEY `idx_status_created_id` (`status`, `created_at`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行程表';
 
 -- 行程成员表
@@ -104,7 +105,8 @@ CREATE TABLE `trip_members` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_trip_user` (`trip_id`, `user_id`),
   KEY `idx_user` (`user_id`),
-  KEY `idx_status` (`status`)
+  KEY `idx_status` (`status`),
+  KEY `idx_user_status_trip` (`user_id`, `status`, `trip_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行程成员表';
 
 -- 下一趟行程草稿表

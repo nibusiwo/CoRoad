@@ -340,6 +340,7 @@ const getRouteInfo = async (req, res, next) => {
       },
       strategy: strategy || '0', // 0: fastest, 1: shortest, 2: avoid highway
       bounding_box: boundingBox,
+      path: allPoints.map((point) => ({ name: point.name || '', lng: point.lng, lat: point.lat })),
       segments: [],
       hint: '路线规划功能将在后续版本中对接高德地图路线规划API',
       api_integration: {
@@ -429,6 +430,23 @@ const getRouteInfo = async (req, res, next) => {
               action: step.action,
               polyline: step.polyline
             }));
+
+            // 对外统一返回真实道路点，避免消费者误用仅含起终点的简化 path。
+            const roadPath = [];
+            for (const segment of routeInfo.segments) {
+              if (!segment.polyline || typeof segment.polyline !== 'string') continue;
+              for (const pair of segment.polyline.split(';')) {
+                const [lng, lat] = pair.split(',').map(Number);
+                if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+                const previous = roadPath[roadPath.length - 1];
+                if (!previous || previous.lng !== lng || previous.lat !== lat) {
+                  roadPath.push({ lng, lat });
+                }
+              }
+            }
+            if (roadPath.length > 1) {
+              routeInfo.path = roadPath;
+            }
 
             // Parse restricted detail
             if (amapRoute.restricted) {

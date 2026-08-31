@@ -3,6 +3,30 @@ const { ApiResponse, calcDistance } = require('../utils/helpers');
 const config = require('../config');
 const websocket = require('../services/websocket');
 
+/**
+ * Restore active trip leader membership after stale auto-detach data.
+ */
+async function ensureTripLeaderChatMembership(userId) {
+  const [leaderSessions] = await pool.query(
+    `SELECT cs.id
+     FROM chat_sessions cs
+     JOIN trips t ON t.id = cs.trip_id
+     WHERE cs.type = 'team_group'
+       AND cs.is_active = 1
+       AND t.leader_id = ?
+       AND t.status IN (1, 2)`,
+    [userId]
+  );
+
+  for (const session of leaderSessions) {
+    await pool.query(
+      `INSERT INTO chat_session_members (session_id, user_id, joined_at, left_at)
+       VALUES (?, ?, NOW(), NULL)
+       ON DUPLICATE KEY UPDATE left_at = NULL`,
+      [session.id, userId]
+    );
+  }
+}
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -82,6 +106,7 @@ function userSummary(row) {
 const getSessions = async (req, res, next) => {
   try {
     const userId = req.userId;
+    await ensureTripLeaderChatMembership(userId);
     // A9: 接受前端别名 'team'/'topic',映射到后端 'team_group'/'location_room'
     const typeFilterRaw = req.query.type || 'all';
     const typeFilterMap = {
@@ -206,6 +231,8 @@ const getSessionDetail = async (req, res, next) => {
     if (!sessionId || isNaN(sessionId)) {
       return res.status(422).json(ApiResponse.fail('无效的会话ID'));
     }
+
+    await ensureTripLeaderChatMembership(userId);
 
     // Check membership
     const [[memberRow]] = await pool.query(
