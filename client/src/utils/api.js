@@ -195,6 +195,7 @@ function request(options) {
   } = options;
 
   return new Promise((resolve, reject) => {
+    const requestUrl = buildUrl(url);
     // 显示 loading
     if (shouldShowLoading) {
       showLoading(loadingText);
@@ -216,7 +217,7 @@ function request(options) {
     }
 
     uni.request({
-      url: buildUrl(url),
+      url: requestUrl,
       method: method.toUpperCase(),
       data: data,
       header: headers,

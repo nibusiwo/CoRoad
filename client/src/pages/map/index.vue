@@ -172,15 +172,15 @@
       <!-- Bottom Action Buttons Row -->
       <view class="bottom-actions">
         <view class="action-btn primary" @tap="goToTripCreate">
-          <image class="action-btn-icon" src="/static/action/trip-car.png" mode="aspectFit" />
+          <image class="action-btn-icon" src="/static/action/trip-truck-userref.png" mode="aspectFit" />
           <text class="action-btn-text">设行程</text>
         </view>
         <view class="action-btn" @tap="reportMyLocation">
-          <image class="action-btn-icon" src="/static/action/report-pin.png" mode="aspectFit" />
+          <image class="action-btn-icon" src="/static/action/report-pin-userref.png" mode="aspectFit" />
           <text class="action-btn-text">报位置</text>
         </view>
         <view class="action-btn sos" @tap="onSosTap" @touchstart="onSosStart" @touchend="onSosEnd" @touchcancel="onSosEnd">
-          <image class="action-btn-icon" src="/static/action/sos-warning.png" mode="aspectFit" />
+          <image class="action-btn-icon" src="/static/action/sos-warning-v2.png" mode="aspectFit" />
           <text class="action-btn-text">SOS</text>
         </view>
       </view>
@@ -1050,9 +1050,18 @@ export default {
             }
           }
         }
-        const rawPath = roadPath.length > 1
+        const rawRoadPath = roadPath.length > 1
           ? roadPath
           : (routeInfo && Array.isArray(routeInfo.path) ? routeInfo.path : []);
+        // 微信地图原生组件不适合承载上万采样点；等距抽稀保留道路形状，
+        // 同时避免 setData/props 过大导致路线被截断成异常直线。
+        const maxPolylinePoints = 1000;
+        const rawPath = rawRoadPath.length <= maxPolylinePoints
+          ? rawRoadPath
+          : Array.from({ length: maxPolylinePoints }, (_, index) => {
+            const sourceIndex = Math.round(index * (rawRoadPath.length - 1) / (maxPolylinePoints - 1));
+            return rawRoadPath[sourceIndex];
+          });
 
         const points = rawPath
           .map((point) => ({
@@ -3090,9 +3099,9 @@ export default {
 }
 
 .action-btn-icon {
-  width: 44rpx;
-  height: 44rpx;
-  margin-bottom: 4rpx;
+  width: 56rpx;
+  height: 56rpx;
+  margin-bottom: 0;
   flex-shrink: 0;
 }
 

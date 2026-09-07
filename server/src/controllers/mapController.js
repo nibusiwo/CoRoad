@@ -19,6 +19,14 @@ function parseJson(val) {
 /**
  * Calculate a simple bounding box for a route.
  */
+function compactRoutePath(points, maxPoints = 1000) {
+  if (!Array.isArray(points) || points.length <= maxPoints) return points || [];
+  return Array.from({ length: maxPoints }, (_, index) => {
+    const sourceIndex = Math.round(index * (points.length - 1) / (maxPoints - 1));
+    return points[sourceIndex];
+  });
+}
+
 function calculateBoundingBox(points) {
   if (!points || points.length === 0) return null;
 
@@ -445,7 +453,7 @@ const getRouteInfo = async (req, res, next) => {
               }
             }
             if (roadPath.length > 1) {
-              routeInfo.path = roadPath;
+              routeInfo.path = compactRoutePath(roadPath);
             }
 
             // Parse restricted detail
