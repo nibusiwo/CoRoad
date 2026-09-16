@@ -169,6 +169,18 @@ function resolveAssetUrl(url) {
 }
 
 /**
+ * 判断响应体是否来自 CoRoad 后端。
+ * 后端所有接口都使用统一格式 { code, message, data }（ApiResponse），code 为数字。
+ * 若响应不是该格式（如 ngrok/cpolar 隧道离线时对任意路径返回的 HTML 404 页、
+ * 浏览器确认页返回的 HTML 200），说明请求并未到达后端，不能按业务错误处理。
+ * @param {*} data 响应体
+ * @returns {boolean}
+ */
+function isFromBackend(data) {
+  return !!data && typeof data === 'object' && typeof data.code === 'number';
+}
+
+/**
  * 核心请求方法
  * @param {Object} options 请求配置
  * @param {string} options.url 请求地址
@@ -227,6 +239,31 @@ function request(options) {
 
         const statusCode = res.statusCode;
         const responseData = res.data;
+
+        // 响应不是后端统一格式 => 请求未到达后端（隧道离线 / 网关错误页）
+        // 必须在状态码分支之前拦截，否则 404 会被当成「接口不存在」、200 会被当成业务错误，
+        // 掩盖真实原因（后端无任何响应），误导排查方向。
+        if (!isFromBackend(responseData)) {
+          const err = {
+            code: statusCode,
+            message: '服务暂时不可达，请稍后重试',
+            unreachable: true,
+            url: requestUrl
+          };
+          console.error(
+            `[API] 响应非后端格式，请求可能未到达后端: status=${statusCode} url=${requestUrl}`,
+            typeof responseData === 'string' ? responseData.slice(0, 200) : responseData
+          );
+          if (showError) {
+            uni.showToast({
+              title: err.message,
+              icon: 'none',
+              duration: 2000
+            });
+          }
+          reject(err);
+          return;
+        }
 
         // HTTP 状态码处理
         if (statusCode === 200) {

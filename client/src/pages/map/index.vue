@@ -633,6 +633,15 @@ export default {
           longitude: location.longitude
         };
 
+        // getUserLocation 内部已兜底,不会抛错,这里显式判断是否真正定位失败
+        if (this._locationFallback) {
+          uni.showToast({
+            title: '定位失败，使用默认位置',
+            icon: 'none',
+            duration: 2000
+          });
+        }
+
         // 先取行程(终点旗帜/集合点/路线都依赖它,定位失败时也要用它回退起点)
         const hasStoredToken = !!uni.getStorageSync('token');
         if (this.userStore.isLoggedIn || hasStoredToken) {
@@ -665,24 +674,14 @@ export default {
         this.mapReady = true;
         this.checkMapSdk();
       } catch (err) {
-        console.error('Map init failed:', err);
+        // 定位失败已在 getUserLocation 内部兜底,能走到这里的是接口/网络等异常
+        console.error('[Map] initPage failed:', err);
         uni.showToast({
-          title: '定位失败，使用默认位置',
+          title: '服务暂不可用，请检查网络后重试',
           icon: 'none',
           duration: 2000
         });
-        // Use default location (Beijing) when geolocation fails
-        this.currentLocation = {
-          latitude: 39.9042,
-          longitude: 116.4074,
-          altitude: 0,
-          speed: 0,
-          heading: 0
-        };
-        this.mapCenter = {
-          latitude: 39.9042,
-          longitude: 116.4074
-        };
+        // 坐标已在 getUserLocation 中确定(真实定位/行程起点/默认坐标),此处不再覆盖,避免地图被拽到北京
         this.mapReady = true;
         this.checkMapSdk();
       }
@@ -708,7 +707,8 @@ export default {
               heading: 0
             });
           },
-          fail: () => {
+          fail: (err) => {
+            console.error('[Map] getLocation fail (gcj02/highAccuracy):', err);
             // Try fallback with lower accuracy
             uni.getLocation({
               type: 'wgs84',
@@ -723,8 +723,9 @@ export default {
                   heading: 0
                 });
               },
-              fail: () => {
+              fail: (err) => {
                 // H5 模式下定位可能不可用,优先回退到行程起点,否则使用默认坐标(成都)
+                console.error('[Map] getLocation fail (wgs84):', err);
                 console.warn('[Map] 定位失败，使用默认位置');
                 this._locationFallback = true;
                 const trip = this.tripStore && this.tripStore.currentTrip;
