@@ -11,14 +11,33 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 /* #endif */
 
 /* #ifdef MP-WEIXIN */
-// 微信小程序 <image> 只支持 HTTPS 地址。
-  // 默认使用 ngrok 静态域名（手机真机/体验版需访问公网域名）：
-  //   https://patronage-native-impeding.ngrok-free.dev
-  // 如需切换域名，通过环境变量注入：
-  //   $env:VITE_API_BASE_URL='https://你的域名/api'; npm.cmd run build:mp-weixin
-  // 注意：若默认值使用 localhost，手机真机上 localhost 指向手机本身，
-  // 会导致接口无法访问、登录失败（仅微信开发者工具内可用）。
-  const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://patronage-native-impeding.ngrok-free.dev/api').replace(/\/+$/, '');
+// 微信开发者工具与后端运行在同一台机器上，直连 localhost 即可，
+// 不要绕公网 ngrok 域名：实测经 ngrok 域名访问约有 10% 的连接建立失败
+// （TCP/TLS 阶段被重置，表现为 ERR_CONNECTION_CLOSED、WebSocket 1006），
+// 且免费版还有 200次/分钟 限速与浏览器警告页，纯属给开发链路增加故障点。
+// 真机预览/体验版访问不到 localhost（会指向手机自己），才必须走公网域名。
+const IS_DEVTOOLS = (() => {
+  try {
+    const info = typeof uni.getDeviceInfo === 'function' ? uni.getDeviceInfo() : uni.getSystemInfoSync();
+    return !!info && info.platform === 'devtools';
+  } catch (e) {
+    return false;
+  }
+})();
+
+// 开发者工具里刻意用 127.0.0.1 而不是 localhost：
+// 微信开发者工具是 Chromium 内核，如果曾经用 https://localhost:3443 打开过
+// 自签名 HTTPS 服务（加载头像/图片），浏览器会把 localhost 记进 HSTS，
+// 之后 http://localhost:3000 会被强制升级成 https://localhost:3000，
+// 而 3000 是明文端口，报 ERR_SSL_PROTOCOL_ERROR，登录等接口全部失败。
+// HSTS 对 IP 地址字面量不生效，所以 127.0.0.1 不会被劫持成 HTTPS。
+const DEFAULT_BASE_URL = IS_DEVTOOLS
+  ? 'http://127.0.0.1:3000/api'
+  : 'https://patronage-native-impeding.ngrok-free.dev/api';
+
+// 如需切换域名，通过环境变量注入（优先级最高）：
+//   $env:VITE_API_BASE_URL='https://你的域名/api'; npm.cmd run build:mp-weixin
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, '');
 /* #endif */
 
 /* #ifndef H5 || MP-WEIXIN */
@@ -39,6 +58,13 @@ const UPLOAD_BASE_URL = '';
 
 // 请求超时时间（毫秒）
 const TIMEOUT = 30000;
+
+// 服务不可达时的自动重试（仅 GET）
+// ngrok 等隧道在断线/重连窗口内，边缘会对任意路径返回 HTML 错误页
+// （ngrok 为 ERR_NGROK_3200 "endpoint is offline"），这类中断通常几秒内自愈。
+// 自动重试可避免把瞬时故障暴露成用户可见的报错。
+const RETRY_TIMES = 2;
+const RETRY_DELAY = 800;
 
 // ngrok 免费版浏览器确认页跳过请求头
 // 仅当 API 走 ngrok 域名时携带，其他环境不添加
@@ -193,7 +219,7 @@ function isFromBackend(data) {
  * @param {boolean} options.auth 是否需要携带 token，默认 true
  * @returns {Promise}
  */
-function request(options) {
+function requestOnce(options) {
   const {
     url,
     method = 'GET',
@@ -343,6 +369,60 @@ function request(options) {
       }
     });
   });
+}
+
+/**
+ * 判断失败是否值得重试。
+ * - unreachable: 请求未到达后端（隧道离线，边缘返回 HTML 错误页）
+ * - 无数字 code: uni.request 网络层失败（超时/连接中断）
+ * 后端已正常响应（code 为数字）的业务错误不重试，避免无谓请求。
+ * @param {*} err 错误对象
+ * @returns {boolean}
+ */
+function isRetriable(err) {
+  if (!err) return false;
+  if (err.unreachable) return true;
+  return typeof err.code !== 'number';
+}
+
+/**
+ * 延时
+ * @param {number} ms 毫秒
+ * @returns {Promise}
+ */
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * 带自动重试的请求入口。
+ * 仅对 GET 重试：GET 幂等；POST/PUT/DELETE 重试可能造成重复提交。
+ * @param {Object} options 同 requestOnce
+ * @returns {Promise}
+ */
+function request(options) {
+  const method = (options.method || 'GET').toUpperCase();
+  const maxRetry = method === 'GET' ? RETRY_TIMES : 0;
+
+  const tryRequest = (attempt) => {
+    // 最后一次尝试才展示错误提示，重试过程保持静默
+    const isLastAttempt = attempt > maxRetry;
+    const attemptOptions = isLastAttempt ? options : { ...options, showError: false };
+
+    return requestOnce(attemptOptions).catch((err) => {
+      if (!isLastAttempt && isRetriable(err)) {
+        const wait = RETRY_DELAY * attempt;
+        console.warn(
+          `[API] 服务不可达，${wait}ms 后重试(${attempt}/${maxRetry}): ${options.url}`,
+          err.message || err.errMsg || ''
+        );
+        return delay(wait).then(() => tryRequest(attempt + 1));
+      }
+      throw err;
+    });
+  };
+
+  return tryRequest(1);
 }
 
 // ==================== 请求快捷方法 ====================

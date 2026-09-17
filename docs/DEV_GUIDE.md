@@ -512,10 +512,32 @@ if (process.env.NODE_ENV === 'development') {
 ### WeChat DevTools for Mini Program Testing
 
 1. 打开微信开发者工具
-2. 导入项目 -> 选择 `client/` 目录
+2. 导入项目 -> 选择编译产物目录 `client/dist/dev/mp-weixin`（开发版，watcher 实时重建）
+   或 `client/dist/build/mp-weixin`（`npm run build:mp-weixin` 产物）
 3. 填写 AppID (可使用测试号)
 4. 在详情 -> 本地设置中勾选"不校验合法域名"
 5. 编译运行
+
+#### 排错：登录/接口全部 `ERR_SSL_PROTOCOL_ERROR`
+
+开发者工具里请求地址必须是明文 HTTP `http://127.0.0.1:3000/api`
+（见 `client/src/utils/api.js` 的 `DEFAULT_BASE_URL`）。如果控制台出现
+`GET https://localhost:3000/api/...` + `net::ERR_SSL_PROTOCOL_ERROR`，
+而 3000 端口本身是明文 HTTP，说明请求被"升级"成了 HTTPS，通常是这三件事之一：
+
+1. **HSTS 污染 localhost**：曾经访问过本地 HTTPS 服务（3443 自签名证书）并收到过
+   `Strict-Transport-Security`，Chromium 内核会把 `localhost` 永久锁成 https。
+   服务端已改为只在生产环境下发该响应头（`server/src/app.js` 的 `enableHsts`），
+   客户端也改用 IP 字面量 `127.0.0.1`（HSTS 对 IP 不生效）来规避。
+2. **系统代理劫持本地请求**：Clash 等工具的"系统代理"（如 `127.0.0.1:10090`）
+   没有把本地地址加入绕过列表，开发者工具会跟随系统代理，导致本地接口 502 / 连接被重置。
+   处理：开发者工具 → 设置 → 代理设置 → **不使用任何代理**；
+   或把 `localhost;127.0.0.1` 加入系统代理的绕过列表。
+3. **编译产物过期**：改完配置要重新 `npm run build:mp-weixin` 并在工具里
+   点击"编译"（或清缓存后重新编译）。
+
+> 控制台里的 `clickCheckTask err: Cannot read property '0' of null` 来自微信开发者工具
+> 内置的"快速填充/AI"模块，与本项目代码无关，可以忽略。
 
 ### H5 Testing
 

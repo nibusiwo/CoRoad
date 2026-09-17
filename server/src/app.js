@@ -32,7 +32,23 @@ const app = express();
 app.set('trust proxy', 1);
 
 // -- Security headers --------------------------------------------------------
-app.use(helmet());
+// HSTS 只在生产环境开启,本地开发必须关闭:
+// 本地后端同时监听 HTTP(3000) 与 HTTPS(3443,自签名证书,供小程序加载图片/头像)。
+// 只要有一次 HTTPS 响应带上 Strict-Transport-Security,Chromium 内核客户端
+// (微信开发者工具 / Chrome / Edge)就会记住 localhost 并把它"锁"成 https——
+// 之后所有 http://localhost:3000 的请求会被静默升级成 https://localhost:3000,
+// 而 3000 是明文 HTTP 端口,结果是 ERR_SSL_PROTOCOL_ERROR、
+// 登录/地图等所有接口全部 request:fail。
+// 如需在自建 HTTPS 环境强制开启,设置 ENABLE_HSTS=true;
+// 生产环境(由 Nginx 终止 TLS)也可直接在 Nginx 上配置该响应头。
+const enableHsts = process.env.ENABLE_HSTS
+  ? process.env.ENABLE_HSTS === 'true'
+  : process.env.NODE_ENV === 'production';
+app.use(
+  helmet({
+    hsts: enableHsts ? { maxAge: 15552000, includeSubDomains: true } : false,
+  }),
+);
 
 // -- CORS --------------------------------------------------------------------
 app.use(
