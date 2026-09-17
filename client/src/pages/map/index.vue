@@ -61,7 +61,7 @@
       :enable-traffic="trafficEnabled"
       :markers="displayMarkers"
       :polyline="routePolyline"
-      :include-points="includePoints"
+      :include-points="mapIncludePoints"
       :enable-3D="true"
       :enable-overlooking="true"
       :enable-zoom="true"
@@ -109,6 +109,17 @@
     <!-- ==================== Layer Toggle Button ==================== -->
     <view class="layer-toggle-btn" @tap="showLayerPanel = !showLayerPanel" v-if="mapReady">
       <text class="layer-icon">🗺️</text>
+    </view>
+
+    <!-- ==================== Recenter Button ====================
+         只在用户点击时定位,不做自动跟随(自动跟随会在拖动地图时把视野拽回来) -->
+    <view
+      class="recenter-btn"
+      :class="{ active: userMovedMap }"
+      v-if="mapReady && currentLocation && !showLayerPanel"
+      @tap="recenterToMe"
+    >
+      <text class="recenter-icon">📍</text>
     </view>
 
     <!-- Layer Control Panel -->
@@ -260,6 +271,16 @@ export default {
       mapScale: 12,
       trafficEnabled: true,
       mapReady: false,
+      // 视野版本号:仅用于让"依赖当前视野"的计算(标记聚合、视野过滤)在
+      // 手势缩放/拖动后重新执行。注意它不绑定给任何 map 属性——
+      // 地图的实际缩放/中心保存在非响应式字段里,不回写 map 属性,
+      // 否则微信小程序会在属性更新时把视野重新定位到绑定的中心点(我的位置)。
+      viewRevision: 0,
+      // 视野适配点(include-points):只在首屏应用一次,之后不再自动变化,
+      // 避免拖动地图时被定位上报/数据刷新触发的重新 fitBounds 拽回"我的位置"
+      mapIncludePoints: [],
+      // 用户是否手动拖动/缩放过地图(用于提示可点击"回到我的位置")
+      userMovedMap: false,
       mapLoadTimeout: null,
       isH5Mode: false,
       mapSdkError: false,
@@ -363,6 +384,25 @@ export default {
     },
 
     /**
+     * 地图当前实际缩放级别
+     * 手势缩放后的真实值保存在非响应式字段 _liveScale 中,不写回 map 的 scale 属性,
+     * 否则微信小程序会在 scale 变化时把视野重新定位到绑定的中心点。
+     * viewRevision 用于建立响应式依赖,视野变化后本计算与相关聚合会重新执行。
+     */
+    liveScale() {
+      const revision = this.viewRevision;
+      return revision >= 0 && this._liveScale > 0 ? this._liveScale : this.mapScale;
+    },
+
+    /**
+     * 地图当前实际视野中心(拖动后为地图上报的中心,否则为绑定中心)
+     */
+    liveCenter() {
+      const revision = this.viewRevision;
+      return revision >= 0 && this._liveCenter ? this._liveCenter : this.mapCenter;
+    },
+
+    /**
      * Assemble display markers based on visible layers
      */
     displayMarkers() {
@@ -395,7 +435,8 @@ export default {
       const out = [];
 
       // B3: 渐进式展开(靠近地图中心的先显示,放大逐步增多;其余网格聚合)
-      const clustered = this.clusterMarkers(layerMarkers.map((x) => x.marker), this.mapScale);
+      // 使用实际缩放(liveScale)聚合:手势缩放不回写 map 属性,但聚合需要跟着变
+      const clustered = this.clusterMarkers(layerMarkers.map((x) => x.marker), this.liveScale);
       clustered.forEach((m) => {
         // 聚合气泡使用独立的 cluster 命名空间(负 id 可能与其他图层重复)
         const key = (typeof m.id === 'number' && m.id < 0)
@@ -427,61 +468,20 @@ export default {
       return out.map((m) => this._normalizeMarkerId(m));
     },
 
-    /**
-     * Compute includePoints for the map (fit nearby team members only)
-     */
-    includePoints() {
-      const points = [];
-      const isValidCoord = (lat, lng) =>
-        typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng);
-
-      if (this.shareLocationOn && this.tripStore.hasActiveTrip) {
-        const me = this.currentLocation;
-        this.allMarkers.teammates.forEach((m) => {
-          if (isValidCoord(m.latitude, m.longitude)) {
-            // 只适配附近队友(50km 内,最多 20 人),避免成员分散在全国时
-            // 地图被 include-points 强制缩到全国视野,导致定位"消失"和大量聚合蓝标
-            if (me && this.calcSimpleDistance(me.latitude, me.longitude, m.latitude, m.longitude) > 50) {
-              return;
-            }
-            if (points.length >= 20) return;
-            points.push({ latitude: m.latitude, longitude: m.longitude });
-          }
-        });
-      }
-      // 当前行程的起终点也纳入视野，避免广州出发、北京终点时终点在屏幕外。
-      // 只加入端点而不加入整条 path，避免大量路线采样点触发频繁重绘。
-      if (this.tripStore.hasCurrentTrip) {
-        const trip = this.tripStore.currentTrip;
-        [trip.startPointData, trip.endPointData].forEach((point) => {
-          const latitude = Number(point && (point.lat ?? point.latitude));
-          const longitude = Number(point && (point.lng ?? point.longitude));
-          if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-            points.push({ latitude, longitude });
-          }
-        });
-      }
-
-      // 地图本身已以当前定位为中心(latitude/longitude),不需要把当前点重复塞进 includePoints
-      // 同一组坐标返回同一数组引用,避免每次定位上报都触发地图重新 fit(跳动/卡顿)
-      const key = JSON.stringify(points);
-      if (this._includePointsKey === key && this._includePointsValue) {
-        return this._includePointsValue;
-      }
-      this._includePointsKey = key;
-      this._includePointsValue = points;
-      return points;
-    }
   },
 
   /**
    * Lifecycle: Component Created
    */
   created() {
-    // 非响应式缓存:marker 对象去重 + includePoints 去重 + 地图数据请求节流
+    // 非响应式缓存:marker 对象去重 + 首屏视野适配标记 + 地图数据请求节流
     this._markerCache = new Map();
-    this._includePointsKey = '';
-    this._includePointsValue = null;
+    this._includePointsApplied = false;
+    // 程序化视野变化的静默窗口(ms),用于区分"用户拖动"与"代码触发的地图适配"
+    this._programmaticViewChangeUntil = 0;
+    // 地图实际缩放/视野中心(非响应式:只读不写回 map 属性,避免地图被重新定位)
+    this._liveScale = 0;
+    this._liveCenter = null;
     this._lastMapDataFetch = 0;
     this._mapDataFetching = false;
     this._locationFallback = false;
@@ -632,6 +632,7 @@ export default {
           latitude: location.latitude,
           longitude: location.longitude
         };
+        this._liveCenter = { latitude: location.latitude, longitude: location.longitude };
 
         // getUserLocation 内部已兜底,不会抛错,这里显式判断是否真正定位失败
         if (this._locationFallback) {
@@ -652,6 +653,7 @@ export default {
             if (sp && typeof sp.lat === 'number' && typeof sp.lng === 'number') {
               this.currentLocation = { ...this.currentLocation, latitude: sp.lat, longitude: sp.lng };
               this.mapCenter = { latitude: sp.lat, longitude: sp.lng };
+              this._liveCenter = { latitude: sp.lat, longitude: sp.lng };
             }
           }
           if (this.tripStore.hasActiveTrip) {
@@ -663,6 +665,9 @@ export default {
 
         // 围绕最终中心点拉取地图数据(定位失败回退到行程起点后,数据范围也保持一致)
         await this.fetchMapData();
+
+        // 首屏只做一次视野适配(把队友/行程起终点纳入视野),之后视野完全交给用户手动控制
+        this.applyInitialIncludePoints();
 
         // Fetch weather
         this.fetchWeather(this.mapCenter.latitude, this.mapCenter.longitude);
@@ -863,6 +868,112 @@ export default {
       }
     },
 
+    // ==================== 视野控制(手动定位) ====================
+
+    /**
+     * 计算"视野适配"坐标点(队友 + 行程起终点)
+     *
+     * 说明:map 组件的 include-points 只要发生变化就会强制 fitBounds。
+     * 队友坐标每 10s 上报一次、地图数据每 30s 刷新一次,如果直接把它做成
+     * 响应式 computed,用户拖动地图时就会被不断拽回"我的位置"附近,
+     * 因此这里只在首屏应用一次,之后仅由用户点击"回到我的位置"时使用。
+     */
+    buildIncludePoints() {
+      const points = [];
+      const isValidCoord = (lat, lng) =>
+        typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng);
+
+      if (this.shareLocationOn && this.tripStore.hasActiveTrip) {
+        const me = this.currentLocation;
+        this.allMarkers.teammates.forEach((m) => {
+          if (isValidCoord(m.latitude, m.longitude)) {
+            // 只适配附近队友(50km 内,最多 20 人),避免成员分散在全国时
+            // 地图被 include-points 强制缩到全国视野,导致定位"消失"和大量聚合蓝标
+            if (me && this.calcSimpleDistance(me.latitude, me.longitude, m.latitude, m.longitude) > 50) {
+              return;
+            }
+            if (points.length >= 20) return;
+            points.push({ latitude: m.latitude, longitude: m.longitude });
+          }
+        });
+      }
+      // 当前行程的起终点也纳入视野，避免广州出发、北京终点时终点在屏幕外。
+      // 只加入端点而不加入整条 path，避免大量路线采样点触发频繁重绘。
+      if (this.tripStore.hasCurrentTrip) {
+        const trip = this.tripStore.currentTrip;
+        [trip.startPointData, trip.endPointData].forEach((point) => {
+          const latitude = Number(point && (point.lat ?? point.latitude));
+          const longitude = Number(point && (point.lng ?? point.longitude));
+          if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+            points.push({ latitude, longitude });
+          }
+        });
+      }
+
+      return points;
+    },
+
+    /**
+     * 首屏一次性视野适配
+     * 只在第一次拿到有效坐标时执行一次;之后即使数据刷新也不再改动 include-points,
+     * 保证用户拖动/缩放后的视野不会被自动拽回。
+     */
+    applyInitialIncludePoints() {
+      if (this._includePointsApplied) return;
+      const points = this.buildIncludePoints();
+      if (!points.length) return;
+      this._includePointsApplied = true;
+      this._programmaticViewChangeUntil = Date.now() + 2500;
+      this.mapIncludePoints = points;
+    },
+
+    /**
+     * 回到我的位置(仅由用户点击触发,不做任何自动跟随)
+     */
+    recenterToMe() {
+      const loc = this.currentLocation;
+      if (!loc || !Number.isFinite(loc.latitude) || !Number.isFinite(loc.longitude)) {
+        uni.showToast({ title: '暂未获取到定位', icon: 'none' });
+        return;
+      }
+
+      const latitude = Number(loc.latitude);
+      const longitude = Number(loc.longitude);
+      this._programmaticViewChangeUntil = Date.now() + 2000;
+
+      // 保留用户当前的缩放级别:把绑定缩放同步为实际缩放,避免这次居中把缩放重置成初始值
+      const live = this.liveScale;
+      if (live > 0 && live !== this.mapScale) {
+        this.mapScale = live;
+      }
+
+      // 兜底方案:通过 mapCenter 数值变化触发地图重新居中
+      // (相同坐标不会触发地图更新,先给一个米级偏移确保 props 真正变化)
+      const applyCenterFallback = () => {
+        this.mapCenter = { latitude: latitude + 0.00001, longitude: longitude + 0.00001 };
+        this.$nextTick(() => {
+          this.mapCenter = { latitude, longitude };
+        });
+      };
+
+      // 主路径:调用地图上下文定位,兼容小程序与 H5
+      try {
+        const mapCtx = uni.createMapContext('coroadMap', this);
+        mapCtx.moveToLocation({
+          latitude,
+          longitude,
+          fail: applyCenterFallback
+        });
+      } catch (err) {
+        applyCenterFallback();
+      }
+
+      // 同步内部中心点,避免后续 props 变化时地图被拽回旧位置
+      this.mapCenter = { latitude, longitude };
+      this._liveCenter = { latitude, longitude };
+      this.userMovedMap = false;
+    },
+
     // ==================== Map Data ====================
 
     async fetchMapData() {
@@ -879,7 +990,8 @@ export default {
         const data = await locationApi.getMapData(
           this.currentLocation.longitude,
           this.currentLocation.latitude,
-          this.mapScale
+          // 用实际缩放(手势缩放不回写 map 属性),保证搜索半径跟随用户视野
+          this.liveScale
         );
 
         if (data) {
@@ -1254,7 +1366,8 @@ export default {
       else gridSize = 0.18;
 
       // 按距地图中心的距离排序,最近的优先直接展开
-      const center = this.mapCenter || { latitude: 30.6, longitude: 104.06 };
+      // 以实际视野中心为准(拖动后为地图上报的中心),让"靠近中心的先展开"符合当前视野
+      const center = this.liveCenter || { latitude: 30.6, longitude: 104.06 };
       const ordered = markers
         .map((m) => ({
           m,
@@ -1734,12 +1847,21 @@ export default {
           (m) => typeof m.id === 'number' && m.id === numericId
         );
         if (clusterMarker && typeof clusterMarker.latitude === 'number' && typeof clusterMarker.longitude === 'number') {
+          // 用户主动点击聚合气泡:这是明确的操作意图,允许更新绑定视图(居中到气泡并放大一级)
           this.mapCenter = {
             latitude: clusterMarker.latitude,
             longitude: clusterMarker.longitude
           };
+          this._liveCenter = {
+            latitude: clusterMarker.latitude,
+            longitude: clusterMarker.longitude
+          };
         }
-        this.mapScale = Math.min(18, this.mapScale + 1);
+        const nextScale = Math.min(18, this.liveScale + 1);
+        this.mapScale = nextScale;
+        this._liveScale = nextScale;
+        this._programmaticViewChangeUntil = Date.now() + 1500;
+        this.viewRevision += 1;
         return;
       }
 
@@ -1954,10 +2076,30 @@ export default {
      */
     onRegionChange(e) {
       if (e.type === 'end') {
-        // A5: 实时更新 mapScale,确保后端按 zoom 调整搜索半径
-        if (e.detail && e.detail.scale) {
-          this.mapScale = e.detail.scale;
+        // 记录用户手动拖动/缩放:causedBy 为 drag/gesture/scale 说明是用户操作,
+        // 'update' 是程序化改动(如首屏视野适配),不计入
+        const causedBy = e.detail && e.detail.causedBy;
+        // 程序化改动(首屏适配/点击回到我的位置)也会触发 scale 类 regionchange,
+        // 这段时间内不标记为"用户已离开定位",避免按钮状态被误点亮
+        const isProgrammatic = Date.now() < (this._programmaticViewChangeUntil || 0);
+        if (!isProgrammatic && (causedBy === 'drag' || causedBy === 'gesture' || causedBy === 'scale')) {
+          this.userMovedMap = true;
         }
+        // A5: 记录实际缩放/视野中心,供后端搜索半径、标记聚合使用。
+        // 关键:只写入非响应式字段,绝不回写 map 的 scale/latitude/longitude 属性——
+        // 微信小程序在这些属性更新时会把地图重新定位到绑定的中心点(我的位置),
+        // 于是"放大/缩小/快速滑动"都会立刻跳回我的定位。
+        const detail = e.detail || {};
+        const nextScale = Number(detail.scale);
+        if (Number.isFinite(nextScale) && nextScale > 0) {
+          this._liveScale = nextScale;
+        }
+        const center = detail.centerLocation;
+        if (center && typeof center.latitude === 'number' && typeof center.longitude === 'number') {
+          this._liveCenter = { latitude: center.latitude, longitude: center.longitude };
+        }
+        // 让依赖视野的计算(聚合/视野过滤)重新执行,但不触碰 map 属性
+        this.viewRevision += 1;
         // Fetch new map data when map region significantly changes
         this.fetchMapData();
         // D3: 更新地图视野边界(节流 500ms,用于跨车队私信气泡过滤)
@@ -1996,18 +2138,19 @@ export default {
             };
           },
           fail: () => {
-            // H5 端 getRegion 可能不支持,fallback 用 mapCenter + mapScale 估算
-            const scale = this.mapScale || 12;
+            // H5 端 getRegion 可能不支持,fallback 用实际中心 + 实际缩放估算
+            const scale = this.liveScale || 12;
+            const center = this.liveCenter || this.mapCenter;
             const latRange = 0.05 * Math.pow(2, 14 - scale);
             const lngRange = latRange * 1.3;
             this.mapBounds = {
               southwest: {
-                lng: this.mapCenter.longitude - lngRange,
-                lat: this.mapCenter.latitude - latRange
+                lng: center.longitude - lngRange,
+                lat: center.latitude - latRange
               },
               northeast: {
-                lng: this.mapCenter.longitude + lngRange,
-                lat: this.mapCenter.latitude + latRange
+                lng: center.longitude + lngRange,
+                lat: center.latitude + latRange
               }
             };
           }
@@ -2853,6 +2996,34 @@ export default {
 }
 
 .layer-icon {
+  font-size: 32rpx;
+}
+
+// 回到我的位置(仅点击触发定位)
+.recenter-btn {
+  position: fixed;
+  top: 292rpx;
+  right: 24rpx;
+  z-index: 110;
+  width: 72rpx;
+  height: 72rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(10rpx);
+  -webkit-backdrop-filter: blur(10rpx);
+  transition: all 0.2s ease;
+
+  &.active {
+    background: rgba(7, 193, 96, 0.14);
+    box-shadow: 0 4rpx 18rpx rgba(7, 193, 96, 0.25);
+  }
+}
+
+.recenter-icon {
   font-size: 32rpx;
 }
 
